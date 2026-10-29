@@ -1,0 +1,118 @@
+# Builds the Android APK and attaches it to the GitHub Release for the tag.
+#
+# WHY CI AND NOT A SANDBOX: an APK needs aapt2 + d8 + apksigner from Android
+# build-tools, and Gradle + the Android Gradle plugin from Google's Maven host.
+# Those only download from dl.google.com / services.gradle.org, which restricted
+# environments block at the TLS layer. GitHub runners have full network access
+# and a preinstalled Android SDK/NDK, so they are the build machine.
+#
+# Triggered by pushing a tag (v*) or manually from the Actions tab.
+
+name: android-apk
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write   # needed to upload the APK to the release
+
+jobs:
+  apk:
+    name: Build APK (python-for-android)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Build the web UI (packaged into the APK as assets)
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+          test -f dist/index.html
+
+      - name: Install buildozer
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install buildozer cython setuptools
+          buildozer --version
+
+      - name: Locate the NDK
+        id: ndk
+        run: |
+          NDK="$(ls -d "$ANDROID_HOME"/ndk/* 2>/dev/null | sort -V | tail -1)"
+          if [ -z "$NDK" ]; then
+            echo "No preinstalled NDK; installing via sdkmanager"
+            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;26.3.11579264" > /dev/null
+            NDK="$ANDROID_HOME/ndk/26.3.11579264"
+          fi
+          echo "ndk=$NDK" >> "$GITHUB_OUTPUT"
+          echo "Using NDK: $NDK"
+
+      - name: Cache the p4a/buildozer toolchain
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.buildozer
+            android/.build
+          key: buildozer-${{ runner.os }}-${{ hashFiles('android/buildozer.spec') }}
+          restore-keys: buildozer-${{ runner.os }}-
+
+      - name: Cross-compile ffmpeg for Android (arm64 + armv7)
+        env:
+          ANDROID_NDK: ${{ steps.ndk.outputs.ndk }}
+        run: bash android/ffmpeg_ndk_build.sh both
+
+      - name: Stage engine + UI into android/
+        run: bash android/prepare.sh
+
+      - name: Build the APK
+        working-directory: android
+        env:
+          ANDROID_NDK: ${{ steps.ndk.outputs.ndk }}
+        run: buildozer -v android debug
+
+      - name: Rename artefact
+        id: artefact
+        run: |
+          TAG="${GITHUB_REF_NAME:-untagged}"
+          APK="$(ls android/*.apk | head -1)"
+          NAME="video-downloader-${TAG}-android-debug.apk"
+          mv "$APK" "$NAME"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          ls -la "$NAME"
+
+      - name: Upload APK as a workflow artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-apk
+          path: ${{ steps.artefact.outputs.name }}
+          retention-days: 30
+
+      - name: Attach APK to the release for this tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          APK: ${{ steps.artefact.outputs.name }}
+        run: |
+          # The release is normally created by the maintainer when tagging;
+          # create it here too so a tag pushed without one still ends up with
+          # an APK attached rather than an empty release.
+          gh release view "$TAG" > /dev/null 2>&1 || \
+            gh release create "$TAG" --title "$TAG" --generate-notes
+          gh release upload "$TAG" "$APK" --clobber
+          echo "Attached $APK to release $TAG"

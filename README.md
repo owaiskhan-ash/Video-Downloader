@@ -57,6 +57,20 @@ npm run tauri:dev                           # develop
 npm run tauri:build                         # produce an installer
 ```
 
+## Android
+
+The same engine and UI ship as an APK via python-for-android — a WebView around
+the local HTTP+SSE server, with CPython + yt-dlp embedded. Tauri mobile is not
+used because it has no Python runtime, and the engine *is* Python.
+
+```bash
+git tag v0.1.0 && git push origin v0.1.0    # CI builds + attaches the APK
+```
+
+or locally: `bash android/prepare.sh && cd android && buildozer android debug`.
+
+Details, architecture diagram and known rough edges: **[docs/ANDROID.md](docs/ANDROID.md)**.
+
 ## Layout
 
 ```
