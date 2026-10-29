@@ -73,19 +73,26 @@ jobs:
           buildozer --version
           python -c "import Cython; print('cython', Cython.__version__)"
 
-      - name: Accept SDK licenses and pin the NDK
+      - name: Seed buildozer's SDK dir and pin the NDK
         id: ndk
-        # buildozer runs sdkmanager NON-interactively into its own SDK dir. The
-        # licence prompt therefore gets no answer, defaults to N, and build-tools
-        # is silently skipped - which then fails as "Aidl not found". Accepting
-        # licences up front, and seeding them into the dir buildozer will create,
-        # removes the prompt entirely.
+        # Two failure modes this prevents, both observed in CI:
         #
-        # "Latest installed NDK" is also a classic p4a breaker, so pin one.
+        # 1. Licence prompt. buildozer runs sdkmanager non-interactively into its
+        #    OWN sdk dir, so "Accept? (y/N)" gets EOF, defaults to N, and
+        #    build-tools is silently skipped -> later "Aidl not found".
+        # 2. Half-seeded dir. Creating that dir with ONLY licenses/ makes
+        #    buildozer believe an SDK exists, so it never installs cmdline-tools,
+        #    then dies with "sdkmanager ... does not exist".
+        #
+        # So: accept licences on the runner SDK, then hardlink-copy the COMPLETE
+        # licensed SDK (cmdline-tools, platforms, build-tools, licenses) into the
+        # exact path buildozer uses. cp -al keeps it fast and near-free of disk.
         run: |
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
-          mkdir -p "$HOME/.buildozer/android/platform/android-sdk"
-          cp -r "$ANDROID_HOME/licenses" "$HOME/.buildozer/android/platform/android-sdk/" 2>/dev/null || true
+          SDK="$HOME/.buildozer/android/platform/android-sdk"
+          mkdir -p "$SDK"
+          cp -al "$ANDROID_HOME"/. "$SDK"/ || cp -r "$ANDROID_HOME"/. "$SDK"/
+          echo "seeded SDK at $SDK:"; ls "$SDK"
 
           PINNED="26.1.10909125"
           if [ ! -d "$ANDROID_HOME/ndk/$PINNED" ]; then
@@ -125,16 +132,9 @@ jobs:
 
       - name: Build the APK
         working-directory: android
-        env:
-          # Point p4a/buildozer at the runner's pre-installed, pre-licensed SDK
-          # instead of letting them download and licence-prompt a fresh one.
-          # The env-var names differ between buildozer and p4a versions, so set
-          # all of them.
-          ANDROIDSDK: ${{ env.ANDROID_HOME }}
-          ANDROID_SDK_ROOT: ${{ env.ANDROID_HOME }}
-          ANDROIDNDK: ${{ steps.ndk.outputs.ndk }}
-          ANDROID_NDK_ROOT: ${{ steps.ndk.outputs.ndk }}
-          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk }}
+        # No SDK/NDK env vars on purpose: buildozer ignored every name tried and
+        # manages its own toolchain under ~/.buildozer. The seeding step above is
+        # what actually controls which SDK it gets.
         # tee, don't just run: when buildozer dies before creating its own log
         # (spec validation, Cython check), the console output is the ONLY record
         # of why, and step logs are unfetchable from restricted environments.
