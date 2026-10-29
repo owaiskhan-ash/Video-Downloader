@@ -149,12 +149,29 @@ jobs:
         env:
           ANDROID_NDK: ${{ steps.ndk.outputs.ndk }}
         run: |
-          if bash android/ffmpeg_ndk_build.sh both; then
+          # tee into a log that the APK report step republishes: continue-on-error
+          # makes this step's failure invisible, and its step logs live on a host
+          # the sandbox cannot fetch, so v0.1.15 shipped with no ffmpeg and no
+          # way to find out why.
+          {
+            echo "== pre-flight =="
+            echo "ANDROID_NDK=$ANDROID_NDK"
+            ls -d "$ANDROID_NDK" 2>/dev/null || echo "!! ANDROID_NDK dir MISSING"
+            ls "$ANDROID_NDK/toolchains/llvm/prebuilt" 2>/dev/null || true
+            echo "runner NDKs:"; ls "$ANDROID_HOME/ndk" 2>/dev/null || echo "  (none)"
+            echo "buildozer NDKs:"; ls "$HOME/.buildozer/android/platform" 2>/dev/null | grep -i ndk || echo "  (none)"
+            for t in make autoconf automake libtool pkg-config nasm yasm git curl; do
+              printf '%-12s %s\n' "$t" "$(command -v "$t" || echo MISSING)"
+            done
+          } 2>&1 | tee android/ffmpeg-build.log
+          bash android/ffmpeg_ndk_build.sh both 2>&1 | tee -a android/ffmpeg-build.log
+          if [ "${PIPESTATUS[0]}" = "0" ]; then
             echo "FFMPEG_BUNDLED=yes" >> "$GITHUB_ENV"
           else
             echo "::warning::ffmpeg cross-compile failed; APK will ship without on-device ffmpeg"
             echo "FFMPEG_BUNDLED=no" >> "$GITHUB_ENV"
           fi
+          echo "last 40 lines:"; tail -40 android/ffmpeg-build.log
 
       - name: Stage engine + UI into android/
         run: bash android/prepare.sh
@@ -296,21 +313,42 @@ jobs:
               print(f'-- outer entries matching {pat!r}: {len(hits)}')
               for h in hits[:40]:
                   print(f'     {h}  ({z.getinfo(h).file_size} bytes)')
-          # p4a packs the Python runtime + our app sources into assets/private.mp3,
-          # which is itself a zip. Unpack it to prove the app code shipped.
-          try:
-              blob = z.read('assets/private.mp3')
-          except KeyError:
-              print('== no assets/private.mp3 ==')
+          # p4a packs the Python runtime + our app sources into assets/private.*,
+          # which is an archive - .tar on this p4a version, .mp3 (a zip) on
+          # others. v0.1.15 shipped private.tar, so a zip-only check reported
+          # "no assets/private.mp3" and left the app's contents unverified.
+          blob_name = next((n for n in names
+                            if n.startswith('assets/private.')), None)
+          if not blob_name:
+              print('== no assets/private.* in the APK ==')
           else:
-              open('/tmp/private.zip', 'wb').write(blob)
-              pz = zipfile.ZipFile('/tmp/private.zip')
-              pn = pz.namelist()
-              print(f'== assets/private.mp3: {len(pn)} entries ==')
-              for key in ['main.py', 'devserver.py', 'engine/', 'dist/', 'yt_dlp', 'ffmpeg']:
-                  hits = [n for n in pn if key in n]
+              blob = z.read(blob_name)
+              local = '/tmp/private.bin'
+              open(local, 'wb').write(blob)
+              print(f'== {blob_name}: {len(blob)} bytes ==')
+              members = []
+              try:
+                  members = zipfile.ZipFile(local).namelist()
+              except zipfile.BadZipFile:
+                  try:
+                      import tarfile
+                      with tarfile.open(local) as tf:
+                          members = tf.getnames()
+                  except tarfile.TarError as exc:
+                      print('   could not read as zip or tar:', exc)
+              print(f'   {len(members)} members')
+              for key in ['main.py', 'devserver.py', 'engine/', 'dist/',
+                          'yt_dlp', 'index.html']:
+                  hits = [n for n in members if key in n]
                   print(f'   {key:14} -> {len(hits):5d}', hits[:4])
           PY
+          # Append INSIDE apk-report.txt: this file is what gets pushed to
+          # ci-logs, so anything only echoed to the console is unreadable.
+          {
+            echo
+            echo "== ffmpeg cross-compile log (tail 150) =="
+            tail -150 android/ffmpeg-build.log 2>/dev/null || echo "(no ffmpeg-build.log)"
+          } >> apk-report.txt
           cat apk-report.txt
           git config user.name "ci-log-bot"
           git config user.email "ci@localhost"
