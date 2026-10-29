@@ -77,7 +77,12 @@ android.permissions = INTERNET, ACCESS_NETWORK_STATE
 # devices working. x86 is omitted — emulators only, and it doubles APK size.
 android.archs = arm64-v8a, armeabi-v7a
 
-android.api = 34
+# android.api MUST be <= 33 while p4a.branch is v2024.01.21: that release pins
+# NDK r25b, whose ndk-build hard-aborts on higher target levels with
+#     Android NDK: android-34 is above the maximum supported version android-33
+# (This kills the genericndkbuild recipe, i.e. the bootstrap's JNI layer.)
+# Raise this only together with a p4a branch that ships a newer NDK.
+android.api = 33
 android.minapi = 24
 android.allow_backup = True
 

@@ -190,12 +190,15 @@ jobs:
             echo "-- buildozer SDK dir --"
             ls -la "$HOME/.buildozer/android/platform/android-sdk" 2>/dev/null | head -20 || echo "(absent)"
             echo
-            echo "== buildozer-console.log (tail 250) =="
-            tail -250 android/buildozer-console.log 2>/dev/null || echo "(no console log)"
+            echo "== buildozer-console.log (tail 400) =="
+            tail -400 android/buildozer-console.log 2>/dev/null || echo "(no console log)"
             echo
-            echo "== buildozer.log (tail 200) =="
-            tail -200 android/.build/buildozer.log 2>/dev/null || echo "(no buildozer.log)"
-            for f in $(find android/.build ~/.buildozer -name '*.log' -o -name '*.txt' 2>/dev/null | head -25); do
+            echo "== buildozer.log (tail 300) =="
+            tail -300 android/.build/buildozer.log 2>/dev/null || echo "(no buildozer.log)"
+            # *.log ONLY. Globbing *.txt here pulled in CPython sources,
+            # googletest golden output and NOTICE.txt from the build trees,
+            # which made grepping this file for the real error useless.
+            for f in $(find android/.build ~/.buildozer -name '*.log' 2>/dev/null | head -25); do
               echo
               echo "== $f (tail 80) =="
               tail -80 "$f"
