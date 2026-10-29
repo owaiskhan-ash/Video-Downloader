@@ -256,3 +256,64 @@ jobs:
             gh release create "$TAG" --title "$TAG" --generate-notes
           gh release upload "$TAG" "$APK" --clobber
           echo "Attached $APK to release $TAG"
+
+      - name: Publish an APK contents report
+        # Always runs, and pushes to the readable ci-logs branch. Step logs live
+        # on a host restricted environments cannot fetch, and release assets
+        # redirect to objects.githubusercontent.com which is also unreachable
+        # from the sandbox - so this report is the only way to verify what the
+        # APK actually contains (bundled ffmpeg? yt-dlp? the UI?) without
+        # downloading 30 MB through a blocked host.
+        if: always()
+        env:
+          APK: ${{ steps.artefact.outputs.name }}
+          FFMPEG_BUNDLED: ${{ env.FFMPEG_BUNDLED }}
+        run: |
+          python3 - > apk-report.txt 2>&1 <<'PY'
+          import hashlib, os, zipfile
+          apk = os.environ.get('APK') or ''
+          print('APK:', apk, '| exists:', os.path.exists(apk))
+          print('FFMPEG_BUNDLED:', os.environ.get('FFMPEG_BUNDLED'))
+          print('== staged ffmpeg binaries (android/assets/ffmpeg) ==')
+          found = False
+          for root, _dirs, files in os.walk('android/assets/ffmpeg'):
+              for f in files:
+                  p = os.path.join(root, f)
+                  print('   ', p, os.path.getsize(p), 'bytes'); found = True
+          if not found:
+              print('    (none)')
+          if not os.path.exists(apk):
+              raise SystemExit('no APK to inspect')
+          size = os.path.getsize(apk)
+          print(f'== APK ==\nsize: {size} bytes ({size/1048576:.1f} MiB)')
+          with open(apk, 'rb') as fh:
+              print('sha256:', hashlib.sha256(fh.read()).hexdigest())
+          z = zipfile.ZipFile(apk)
+          names = z.namelist()
+          print('zip entries:', len(names))
+          for pat in ['AndroidManifest.xml', 'classes', 'lib/', 'assets/']:
+              hits = [n for n in names if pat in n]
+              print(f'-- outer entries matching {pat!r}: {len(hits)}')
+              for h in hits[:40]:
+                  print(f'     {h}  ({z.getinfo(h).file_size} bytes)')
+          # p4a packs the Python runtime + our app sources into assets/private.mp3,
+          # which is itself a zip. Unpack it to prove the app code shipped.
+          try:
+              blob = z.read('assets/private.mp3')
+          except KeyError:
+              print('== no assets/private.mp3 ==')
+          else:
+              open('/tmp/private.zip', 'wb').write(blob)
+              pz = zipfile.ZipFile('/tmp/private.zip')
+              pn = pz.namelist()
+              print(f'== assets/private.mp3: {len(pn)} entries ==')
+              for key in ['main.py', 'devserver.py', 'engine/', 'dist/', 'yt_dlp', 'ffmpeg']:
+                  hits = [n for n in pn if key in n]
+                  print(f'   {key:14} -> {len(hits):5d}', hits[:4])
+          PY
+          cat apk-report.txt
+          git config user.name "ci-log-bot"
+          git config user.email "ci@localhost"
+          git add -f apk-report.txt
+          git commit -q -m "ci: APK contents report for run ${{ github.run_id }}" || echo "nothing to commit"
+          git push origin HEAD:refs/heads/ci-logs --force || echo "report push failed"
