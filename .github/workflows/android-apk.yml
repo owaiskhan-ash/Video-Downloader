@@ -44,11 +44,25 @@ jobs:
           npm run build
           test -f dist/index.html
 
+      - name: Install build system packages
+        # python-for-android compiles CPython and its recipes from source, so it
+        # needs the usual autotools/zlib/lzma/ssl headers. Runners have most of
+        # these, but a missing one fails deep inside a recipe with a confusing
+        # error, so install the known set explicitly.
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq build-essential autoconf automake libtool \
+            pkg-config zlib1g-dev liblzma-dev libssl-dev libffi-dev git ccache
+
       - name: Install buildozer
         run: |
           python -m pip install --upgrade pip
-          python -m pip install buildozer cython setuptools
+          # Cython is pinned ON PURPOSE: python-for-android validates the Cython
+          # version at startup and exits before writing any log when it sees one
+          # it was not tested against. 3.0.x is what current p4a supports.
+          python -m pip install buildozer "cython==3.0.11" setuptools
           buildozer --version
+          python -c "import Cython; print('cython', Cython.__version__)"
 
       - name: Install a pinned NDK
         id: ndk
@@ -97,7 +111,14 @@ jobs:
         env:
           ANDROID_NDK: ${{ steps.ndk.outputs.ndk }}
           ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk }}
-        run: buildozer -v android debug
+        # tee, don't just run: when buildozer dies before creating its own log
+        # (spec validation, Cython check), the console output is the ONLY record
+        # of why, and step logs are unfetchable from restricted environments.
+        run: |
+          set +e
+          buildozer -v android debug 2>&1 | tee buildozer-console.log
+          status=${PIPESTATUS[0]}
+          exit "$status"
 
       - name: Publish build logs on failure
         # The runner's step logs live on a host that restricted environments
@@ -109,9 +130,12 @@ jobs:
           {
             echo "# CI failure log — run ${{ github.run_id }} / ${{ github.ref_name }}"
             echo
+            echo "== buildozer-console.log (tail 250) =="
+            tail -250 android/buildozer-console.log 2>/dev/null || echo "(no console log)"
+            echo
             echo "== buildozer.log (tail 200) =="
             tail -200 android/.build/buildozer.log 2>/dev/null || echo "(no buildozer.log)"
-            for f in $(find android/.build -name '*.log' -o -name '*.txt' 2>/dev/null | head -25); do
+            for f in $(find android/.build ~/.buildozer -name '*.log' -o -name '*.txt' 2>/dev/null | head -25); do
               echo
               echo "== $f (tail 80) =="
               tail -80 "$f"
