@@ -81,16 +81,16 @@ jobs:
           buildozer --version
           python -c "import Cython; print('cython', Cython.__version__)"
 
-      # Cache MUST run before the seed step and MUST NOT include ~/.buildozer:
-      # restoring it afterwards overwrote the freshly seeded SDK with a stale
-      # cached copy (a licenses-only dir from an earlier failed run), which is
-      # what made buildozer report "sdkmanager ... does not exist".
-      - name: Cache the p4a build directory
-        uses: actions/cache@v4
-        with:
-          path: android/.build
-          key: p4a-${{ runner.os }}-${{ hashFiles('android/buildozer.spec') }}
-          restore-keys: p4a-${{ runner.os }}-
+      # NO caching of build state, on purpose.
+      #
+      # Two separate CI failures came from restoring stale state: ~/.buildozer
+      # (a licenses-only SDK dir clobbered the seeded one) and android/.build (a
+      # half-built p4a venv whose pip was mid-upgrade when an earlier run died,
+      # restored as a site-packages with mixed pip versions ->
+      # "ImportError: cannot import name 'BuildDependencyInstallError'").
+      #
+      # A from-scratch p4a build costs ~20 minutes; a poisoned cache costs
+      # iterations of that. Not worth it until the build is green and stable.
 
       - name: Seed buildozer's SDK dir and pin the NDK
         id: ndk
