@@ -214,10 +214,24 @@ jobs:
       - name: Rename artefact
         id: artefact
         run: |
+          set -x
           TAG="${GITHUB_REF_NAME:-untagged}"
-          APK="$(ls android/*.apk | head -1)"
           NAME="video-downloader-${TAG}-android-debug.apk"
-          mv "$APK" "$NAME"
+          # buildozer/p4a write the APK to android/bin/, NOT android/.
+          # Look there first, then anywhere under the build tree, newest first.
+          APK="$(ls -t android/bin/*.apk 2>/dev/null | head -1 || true)"
+          if [ -z "$APK" ]; then
+            APK="$(find android -maxdepth 5 -name '*.apk' -type f -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2- || true)"
+          fi
+          if [ -z "$APK" ]; then
+            echo "ERROR: no .apk produced"
+            ls -la android android/bin 2>/dev/null || true
+            find android -maxdepth 3 -type d 2>/dev/null | head -40
+            exit 1
+          fi
+          echo "found APK: $APK"
+          ls -la "$APK"
+          cp "$APK" "$NAME"
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
           ls -la "$NAME"
 
