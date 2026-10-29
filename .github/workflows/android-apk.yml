@@ -21,15 +21,15 @@ permissions:
 jobs:
   apk:
     name: Build APK (python-for-android)
-    # ubuntu-24.04 ON PURPOSE, not ubuntu-latest.
+    # ubuntu-22.04 ON PURPOSE, not ubuntu-latest.
     #
-    # p4a's libffi recipe runs autoreconf against libffi's old autotools build
-    # system. The ubuntu-26 image ships autoconf/libtool new enough that
-    # libffi's configure.ac fails with
-    #     possibly undefined macro: LT_SYS_SYMBOL_USCORE
-    # killing the build ~20 minutes in. ubuntu-24.04 carries the toolchain
-    # versions python-for-android is actually tested against.
-    runs-on: ubuntu-24.04
+    # p4a's libffi recipe runs autoreconf against libffi's autotools build
+    # system, and libffi's configure.ac calls LT_SYS_SYMBOL_USCORE - a macro
+    # that libtool 2.4.7 (ubuntu-24.04) and 2.5 (ubuntu-26) have REMOVED. Both
+    # fail with "possibly undefined macro: LT_SYS_SYMBOL_USCORE" ~20 minutes in.
+    # libtool 2.4.6 on ubuntu-22.04 still defines it, and 22.04 is the image
+    # python-for-android's own CI builds on.
+    runs-on: ubuntu-22.04
     timeout-minutes: 90
 
     steps:
