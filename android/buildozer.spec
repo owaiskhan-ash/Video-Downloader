@@ -45,7 +45,8 @@ requirements = python3,pyjnius,yt-dlp
 
 # webview bootstrap: native WebView + our Python on a background thread.
 # This is what makes "Python backend + web frontend" work without Kivy.
-android.bootstrap = webview
+# NOTE: the key is p4a.bootstrap — android.bootstrap is deprecated and warns.
+p4a.bootstrap = webview
 
 # The bootstrap, if it honours manifest meta-data, loads this URL. main.py also
 # sets it explicitly via pyjnius as a fallback, so a bootstrap that ignores
@@ -72,7 +73,10 @@ android.enable_androidx = True
 # the private files dir at first run (assets ship compressed and non-executable).
 android.add_assets = assets
 
-p4a.source_dir = .
+# DO NOT add p4a.source_dir here. It points buildozer at a *local checkout of
+# python-for-android itself* (it then looks for p4a's setup.py in that dir).
+# Setting it to "." made buildozer treat this app directory as p4a's source and
+# fail with "Failed to read python-for-android setup.py at ./setup.py".
 
 [buildozer]
 buildozer.directory = .build

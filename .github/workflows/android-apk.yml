@@ -38,6 +38,15 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+        # Runners currently default to a very new JDK (25). p4a's Gradle/AGP
+        # combination is validated against 17; a too-new javac fails the Gradle
+        # build with errors that look unrelated to Java at all.
+
       - name: Build the web UI (packaged into the APK as assets)
         run: |
           npm ci --no-audit --no-fund
