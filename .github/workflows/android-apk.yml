@@ -109,6 +109,21 @@ jobs:
           cp -a "$ANDROID_HOME"/. "$SDK"/
           echo "seeded SDK at $SDK:"; ls -la "$SDK"; df -h "$SDK" | tail -1
 
+          # This buildozer looks for sdkmanager at the LEGACY path
+          #   <sdk>/tools/bin/sdkmanager
+          # but SDKs have shipped it at cmdline-tools/latest/bin/ for years, so a
+          # seeded (or runner) SDK always fails its check with
+          #   "sdkmanager path ... does not exist, sdkmanager is notinstalled"
+          # and exits. Symlinking the legacy path onto the real binary satisfies
+          # the check, and with licences already accepted its follow-up
+          # build-tools install then succeeds instead of being skipped.
+          mkdir -p "$SDK/tools/bin"
+          for t in sdkmanager avdmanager apksigner lint; do
+            [ -f "$SDK/cmdline-tools/latest/bin/$t" ] && \
+              ln -sf "$SDK/cmdline-tools/latest/bin/$t" "$SDK/tools/bin/$t"
+          done
+          ls -la "$SDK/tools/bin/"
+
           PINNED="26.1.10909125"
           if [ ! -d "$ANDROID_HOME/ndk/$PINNED" ]; then
             echo "installing ndk;$PINNED"
