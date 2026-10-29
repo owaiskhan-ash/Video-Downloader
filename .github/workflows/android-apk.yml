@@ -73,43 +73,49 @@ jobs:
           buildozer --version
           python -c "import Cython; print('cython', Cython.__version__)"
 
+      # Cache MUST run before the seed step and MUST NOT include ~/.buildozer:
+      # restoring it afterwards overwrote the freshly seeded SDK with a stale
+      # cached copy (a licenses-only dir from an earlier failed run), which is
+      # what made buildozer report "sdkmanager ... does not exist".
+      - name: Cache the p4a build directory
+        uses: actions/cache@v4
+        with:
+          path: android/.build
+          key: p4a-${{ runner.os }}-${{ hashFiles('android/buildozer.spec') }}
+          restore-keys: p4a-${{ runner.os }}-
+
       - name: Seed buildozer's SDK dir and pin the NDK
         id: ndk
-        # Two failure modes this prevents, both observed in CI:
+        # Failure modes this prevents, all observed in CI:
         #
         # 1. Licence prompt. buildozer runs sdkmanager non-interactively into its
         #    OWN sdk dir, so "Accept? (y/N)" gets EOF, defaults to N, and
         #    build-tools is silently skipped -> later "Aidl not found".
-        # 2. Half-seeded dir. Creating that dir with ONLY licenses/ makes
-        #    buildozer believe an SDK exists, so it never installs cmdline-tools,
-        #    then dies with "sdkmanager ... does not exist".
+        # 2. Half-seeded dir. A dir containing ONLY licenses/ makes buildozer
+        #    believe an SDK exists, so it never installs cmdline-tools, then dies
+        #    with "sdkmanager ... does not exist".
+        # 3. Stale state from a previous run's cache. Hence rm -rf first: seeding
+        #    must be idempotent, not additive.
         #
-        # So: accept licences on the runner SDK, then hardlink-copy the COMPLETE
-        # licensed SDK (cmdline-tools, platforms, build-tools, licenses) into the
-        # exact path buildozer uses. cp -al keeps it fast and near-free of disk.
+        # So: accept licences on the runner SDK, then copy the COMPLETE licensed
+        # SDK (cmdline-tools, platforms, build-tools, licenses) into the exact
+        # path buildozer uses.
         run: |
+          set -x
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
           SDK="$HOME/.buildozer/android/platform/android-sdk"
+          rm -rf "$SDK"
           mkdir -p "$SDK"
-          cp -al "$ANDROID_HOME"/. "$SDK"/ || cp -r "$ANDROID_HOME"/. "$SDK"/
-          echo "seeded SDK at $SDK:"; ls "$SDK"
+          cp -a "$ANDROID_HOME"/. "$SDK"/
+          echo "seeded SDK at $SDK:"; ls -la "$SDK"; df -h "$SDK" | tail -1
 
           PINNED="26.1.10909125"
           if [ ! -d "$ANDROID_HOME/ndk/$PINNED" ]; then
             echo "installing ndk;$PINNED"
-            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$PINNED" > /dev/null
+            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$PINNED" > /dev/null || true
           fi
           echo "ndk=$ANDROID_HOME/ndk/$PINNED" >> "$GITHUB_OUTPUT"
           echo "Using NDK: $ANDROID_HOME/ndk/$PINNED"
-
-      - name: Cache the p4a/buildozer toolchain
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.buildozer
-            android/.build
-          key: buildozer-${{ runner.os }}-${{ hashFiles('android/buildozer.spec') }}
-          restore-keys: buildozer-${{ runner.os }}-
 
       - name: Cross-compile ffmpeg for Android (arm64 + armv7)
         # Non-fatal ON PURPOSE. The APK is the deliverable; a bundled ffmpeg only
@@ -153,6 +159,13 @@ jobs:
         run: |
           {
             echo "# CI failure log — run ${{ github.run_id }} / ${{ github.ref_name }}"
+            echo
+            echo "== environment =="
+            df -h / /home 2>/dev/null | tail -3
+            echo "-- \$HOME/.buildozer (top 2 levels) --"
+            find "$HOME/.buildozer" -maxdepth 2 2>/dev/null | head -30
+            echo "-- buildozer SDK dir --"
+            ls -la "$HOME/.buildozer/android/platform/android-sdk" 2>/dev/null | head -20 || echo "(absent)"
             echo
             echo "== buildozer-console.log (tail 250) =="
             tail -250 android/buildozer-console.log 2>/dev/null || echo "(no console log)"
