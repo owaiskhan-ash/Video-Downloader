@@ -48,6 +48,24 @@ requirements = python3,pyjnius,yt-dlp
 # NOTE: the key is p4a.bootstrap — android.bootstrap is deprecated and warns.
 p4a.bootstrap = webview
 
+# Pin python-for-android to a RELEASE, not master.
+#
+# With master, the build dies upgrading pip inside the venv that hostpython
+# creates:
+#   ImportError: cannot import name 'BuildDependencyInstallError'
+#                from 'pip._internal.exceptions'
+#                (.../build/venv/lib/python3.14/site-packages/pip/...)
+# master's hostpython3 recipe now builds CPython 3.14, whose freshly-built
+# ensurepip produces a venv with a self-inconsistent pip. Confirmed
+# reproducible with no build cache, so it is upstream and not stale state.
+#
+# v2024.01.21 is the newest release whose hostpython3 is 3.11.5 (checked via
+# the GitHub API), and it supports every flag buildozer passes it:
+# --ignore-setup-py, --copy-libs, --ndk-api, --bootstrap.
+# Note the release before it, v2026.05.09, pins 3.14.2 and would hit the
+# same bug.
+p4a.branch = v2024.01.21
+
 # The bootstrap, if it honours manifest meta-data, loads this URL. main.py also
 # sets it explicitly via pyjnius as a fallback, so a bootstrap that ignores
 # meta-data still ends up on the right page.
