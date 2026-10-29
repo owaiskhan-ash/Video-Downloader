@@ -1,0 +1,39 @@
+[package]
+name = "video-downloader"
+version = "0.1.0"
+description = "Paste a link, get the video in HD (H.264/AAC mp4)"
+authors = ["you"]
+edition = "2021"
+rust-version = "1.77.2"
+
+# The library target is what Tauri's desktop and mobile entry points call into.
+[lib]
+name = "video_downloader_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"    # native "choose folder" picker
+tauri-plugin-opener = "2"    # reveal file in Finder / Explorer
+tauri-plugin-store = "2"     # persist settings + download history
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v4"] }
+thiserror = "2"
+# NOTE: we spawn the engine with tokio::process::Command rather than
+# tauri-plugin-shell. The plugin's sidecar API needs a scope entry per binary
+# and gives back a CommandChild type that can't be shared across tasks easily;
+# tokio's Child is Send, has async stdout, and start_kill() works uniformly for
+# both the dev `python -m engine` case and the packaged sidecar.
+tokio = { version = "1", features = ["process", "io-util", "rt-multi-thread", "macros", "sync", "time"] }
+futures-util = "0.3"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"        # small binary
+panic = "abort"
+strip = true

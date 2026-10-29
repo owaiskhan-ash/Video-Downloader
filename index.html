@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Video Downloader</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M12 3a1 1 0 0 1 1 1v8.59l2.3-2.3a1 1 0 1 1 1.4 1.42l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.42l2.3 2.3V4a1 1 0 0 1 1-1Zm-6 15h12a1 1 0 1 1 0 2H6a1 1 0 1 1 0-2Z"
+            />
+          </svg>
+          <span>Video Downloader</span>
+        </div>
+        <div class="topbar-right">
+          <span id="engine-badge" class="badge" title="Engine status">checking…</span>
+        </div>
+      </header>
+
+      <main>
+        <!-- Step 1: paste -->
+        <section class="card" id="paste-card">
+          <label class="field-label" for="url-input">Paste a video link</label>
+          <div class="paste-row">
+            <input
+              id="url-input"
+              type="url"
+              spellcheck="false"
+              autocomplete="off"
+              placeholder="https://www.youtube.com/watch?v=…"
+            />
+            <button id="probe-btn" class="btn btn-primary">Fetch info</button>
+          </div>
+          <p class="hint" id="paste-hint">
+            Works with 1800+ sites via yt-dlp. Nothing is downloaded until you press
+            <strong>Download</strong>.
+          </p>
+          <div id="probe-error" class="alert alert-error" hidden></div>
+        </section>
+
+        <!-- Step 2: preview + options -->
+        <section class="card" id="preview-card" hidden>
+          <div class="preview">
+            <div class="thumb-wrap">
+              <img id="thumb" alt="" />
+              <span id="duration" class="duration-pill"></span>
+            </div>
+            <div class="meta">
+              <h2 id="title"></h2>
+              <p id="uploader" class="subtle"></p>
+              <div id="warnings"></div>
+
+              <div class="options">
+                <div class="option-group">
+                  <span class="field-label">Quality</span>
+                  <div class="segmented" id="quality-picker"></div>
+                </div>
+
+                <label class="toggle" title="Force H.264 video + AAC audio in an .mp4. Plays on TVs, iMessage, PowerPoint, phones. Re-encodes only when the source is VP9/AV1.">
+                  <input type="checkbox" id="compatible" checked />
+                  <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                  <span class="toggle-text">
+                    Maximum compatibility
+                    <em>H.264 / AAC · .mp4</em>
+                  </span>
+                </label>
+
+                <div class="chips">
+                  <label class="chip"><input type="checkbox" id="opt-subs" /><span>Subtitles</span></label>
+                  <label class="chip"><input type="checkbox" id="opt-thumb" /><span>Thumbnail</span></label>
+                  <label class="chip"><input type="checkbox" id="opt-meta" checked /><span>Metadata</span></label>
+                  <label class="chip"><input type="checkbox" id="opt-playlist" /><span>Whole playlist</span></label>
+                </div>
+
+                <details class="clip-details">
+                  <summary>Clip a time range</summary>
+                  <div class="clip-row">
+                    <input id="clip-start" type="text" placeholder="00:01:20" inputmode="numeric" />
+                    <span class="arrow">→</span>
+                    <input id="clip-end" type="text" placeholder="00:02:05" inputmode="numeric" />
+                    <button id="clip-clear" class="btn btn-ghost" type="button">Clear</button>
+                  </div>
+                  <p class="hint">
+                    Leave blank for the full video. Clips are cut precisely (keyframes are
+                    re-inserted), so you get exactly the range you asked for.
+                  </p>
+                </details>
+
+                <div class="format-list" id="format-list"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="action-row">
+            <div class="dest">
+              <span class="field-label">Save to</span>
+              <code id="outdir"></code>
+              <button id="pick-folder" class="btn btn-ghost" type="button">Change…</button>
+            </div>
+            <button id="download-btn" class="btn btn-primary btn-lg">Download</button>
+          </div>
+        </section>
+
+        <!-- Step 3: activity -->
+        <section class="card" id="jobs-card">
+          <div class="card-head">
+            <h3>Downloads</h3>
+            <button id="clear-done" class="btn btn-ghost btn-sm" type="button">Clear finished</button>
+          </div>
+          <div id="jobs" class="jobs">
+            <p class="empty" id="jobs-empty">Nothing yet. Paste a link above to get started.</p>
+          </div>
+        </section>
+      </main>
+
+      <footer class="legal">
+        Only download videos you have the rights to. Most platforms' terms prohibit
+        downloading; DRM-protected streams (Netflix, Prime, Disney+) are not supported
+        and should not be circumvented.
+      </footer>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

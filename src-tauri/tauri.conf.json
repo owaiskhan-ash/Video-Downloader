@@ -1,0 +1,66 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Video Downloader",
+  "version": "0.1.0",
+  "identifier": "app.videodownloader.desktop",
+
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+
+  "app": {
+    "windows": [
+      {
+        "title": "Video Downloader",
+        "label": "main",
+        "width": 1024,
+        "height": 720,
+        "minWidth": 760,
+        "minHeight": 600,
+        "resizable": true,
+        "center": true,
+        "theme": "Dark"
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' https: data: blob: asset:; media-src 'self' blob: asset: https:; style-src 'self' 'unsafe-inline'; connect-src 'self' ipc: http://ipc.localhost"
+    }
+  },
+
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "Utility",
+    "shortDescription": "Download videos in HD",
+    "longDescription": "Paste a link and download the video as a widely compatible H.264/AAC mp4.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": {
+      "../resources": "resources"
+    },
+    "externalBin": ["binaries/engine"],
+    "linux": {
+      "deb": { "depends": [] },
+      "appimage": { "bundleMediaFramework": false }
+    },
+    "macOS": {
+      "minimumSystemVersion": "11.0",
+      "category": "public.app-category.utilities"
+    },
+    "windows": {
+      "nsis": { "installMode": "currentUser" }
+    }
+  },
+
+  "plugins": {
+    "store": { "path": "settings.json" }
+  }
+}

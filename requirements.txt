@@ -1,0 +1,14 @@
+# Engine runtime dependencies.
+#
+# yt-dlp is the extractor. It changes constantly as sites change their players,
+# so pin loosely and update often — most "my downloader stopped working" reports
+# are simply a stale yt-dlp, not a bug in this app.
+yt-dlp>=2025.1.1
+
+# Only needed for the dev ffmpeg fallback (engine/ffmpeg.py step 4). A packaged
+# build should ship a real static binary instead — see scripts/setup_engine.py.
+imageio-ffmpeg>=0.4.9
+
+# Only needed to build the Tauri sidecar (scripts/setup_engine.py --sidecar).
+# Kept out of the runtime set so a plain `pip install -r` stays light.
+# pyinstaller>=6.0
