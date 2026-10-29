@@ -102,6 +102,22 @@ build_one() {
   fi
 
   echo "==> [$arch] configuring ffmpeg"
+  # ffmpeg's --enable-libx264 check is a pkg-config check
+  # (require_pkg_config libx264 x264 x264.h x264_encoder_encode), so -I/-L
+  # alone are not enough: without PKG_CONFIG_PATH pointing at the x264 prefix
+  # configure dies with "ERROR: x264 not found using pkg-config" even though
+  # libx264.a and x264.h are sitting right there. That was v0.1.17's failure.
+  # --pkg-config-flags=--static then resolves x264.pc's Libs.private, which is
+  # what a static link into ffmpeg actually needs.
+  export PKG_CONFIG_PATH="$x264_prefix/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+  if ! pkg-config --exists x264; then
+    echo "ERROR: pkg-config still cannot see x264" >&2
+    echo "  PKG_CONFIG_PATH=$PKG_CONFIG_PATH" >&2
+    ls -la "$x264_prefix/lib" "$x264_prefix/lib/pkgconfig" >&2 || true
+    tail -n 25 "$x264_src"/x264-install.log >&2 || true
+    return 1
+  fi
+  echo "    x264 via pkg-config: $(pkg-config --modversion x264) at $x264_prefix"
   # Deliberately NOT using --disable-everything: a hand-picked component list
   # silently omits bitstream filters and parsers the mp4/webm muxers need
   # (h264_mp4toannexb, aac_adtstoasc, vp9 superframe split), which only fail at
@@ -121,6 +137,7 @@ build_one() {
       --enable-pic \
       --enable-gpl \
       --enable-libx264 \
+      --pkg-config-flags="--static" \
       --enable-small \
       --disable-doc --disable-debug --disable-ffplay \
       --disable-autodetect \
