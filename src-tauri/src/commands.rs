@@ -3,8 +3,8 @@
 //! Everything here is thin: validate, launch the engine, relay events. No video
 //! logic lives in Rust.
 
-use crate::engine::{self, EngineLaunch, EVENT};
-use crate::jobs::{JobRegistry, JobState, SharedRegistry};
+use crate::engine::{self, EVENT};
+use crate::jobs::{Job, SharedRegistry};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::path::PathBuf;
@@ -278,7 +278,7 @@ pub async fn cancel_job(
 
 /// Snapshot of every job this session, for the history list.
 #[tauri::command]
-pub async fn list_jobs(registry: State<'_, SharedRegistry>) -> Result<Vec<crate::jobs::Job>, CmdError> {
+pub async fn list_jobs(registry: State<'_, SharedRegistry>) -> Result<Vec<Job>, CmdError> {
     Ok(registry.snapshot().await)
 }
 
@@ -341,14 +341,24 @@ pub async fn pick_folder(app: AppHandle) -> Result<Option<String>, CmdError> {
         .pick_folder(move |picked| {
             if let Ok(mut guard) = tx.lock() {
                 if let Some(tx) = guard.take() {
-                    let _ = tx.send(picked.map(|p| p.into_path().ok()).flatten());
+                    // and_then, not map(...).flatten(): same result, but the
+                    // latter trips clippy's map_flatten lint.
+                    let _ = tx.send(picked.and_then(|p| p.into_path().ok()));
                 }
             }
         });
 
-    // A folder dialog has no timeout — the user may leave it open. Wait
-    // indefinitely but don't block a thread doing it.
-    rx.await.map_err(|_| CmdError::Engine("dialog closed unexpectedly".into()))
+    // A folder dialog has no timeout — the user may leave it open. Await it
+    // rather than blocking a thread.
+    //
+    // The channel carries Option<PathBuf> but the command is declared to return
+    // Option<String>, so convert explicitly — without this the function does not
+    // type-check, and Tauri commands must return something serialisable.
+    let picked = rx
+        .await
+        .map_err(|_| CmdError::Engine("dialog closed unexpectedly".into()))?;
+
+    Ok(picked.map(|p| p.display().to_string()))
 }
 
 /// Reveal a finished file in Finder / Explorer / Files.
@@ -386,11 +396,4 @@ pub async fn default_outdir(app: AppHandle) -> Result<String, CmdError> {
 #[tauri::command]
 pub fn app_version(app: AppHandle) -> Result<String, CmdError> {
     Ok(app.package_info().version.to_string())
-}
-
-/// Keep the registry type referenced for State<'_, JobRegistry> users.
-#[allow(dead_code)]
-fn _assert_registry(reg: &JobRegistry) -> JobState {
-    let _ = reg;
-    JobState::Queued
 }

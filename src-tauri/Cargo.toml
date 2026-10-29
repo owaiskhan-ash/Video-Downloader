@@ -29,7 +29,6 @@ thiserror = "2"
 # tokio's Child is Send, has async stdout, and start_kill() works uniformly for
 # both the dev `python -m engine` case and the packaged sidecar.
 tokio = { version = "1", features = ["process", "io-util", "rt-multi-thread", "macros", "sync", "time"] }
-futures-util = "0.3"
 
 [profile.release]
 codegen-units = 1
