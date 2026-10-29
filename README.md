@@ -63,13 +63,19 @@ The same engine and UI ship as an APK via python-for-android — a WebView aroun
 the local HTTP+SSE server, with CPython + yt-dlp embedded. Tauri mobile is not
 used because it has no Python runtime, and the engine *is* Python.
 
+**Installable debug APK:** see the
+[latest release](https://github.com/owaiskhan-ash/Video-Downloader/releases) —
+`video-downloader-<tag>-android-debug.apk`, ~30 MB, `arm64-v8a` + `armeabi-v7a`.
+Sideload it (allow "install unknown apps"); it is a debug build, so no keystore.
+
 ```bash
-git tag v0.1.0 && git push origin v0.1.0    # CI builds + attaches the APK
+git tag v0.2.0 && git push origin v0.2.0    # CI builds + attaches the APK (~25 min)
 ```
 
 or locally: `bash android/prepare.sh && cd android && buildozer android debug`.
 
-Details, architecture diagram and known rough edges: **[docs/ANDROID.md](docs/ANDROID.md)**.
+Details, the pinned toolchain that CI verified, build traps and known rough
+edges: **[docs/ANDROID.md](docs/ANDROID.md)**.
 
 ## Layout
 
