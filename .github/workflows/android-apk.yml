@@ -72,9 +72,20 @@ jobs:
           restore-keys: buildozer-${{ runner.os }}-
 
       - name: Cross-compile ffmpeg for Android (arm64 + armv7)
+        # Non-fatal ON PURPOSE. The APK is the deliverable; a bundled ffmpeg only
+        # adds HD muxing + compatibility transcoding on device. If the
+        # cross-compile regresses, shipping an APK that degrades to pre-merged
+        # streams (and says so in the status badge) beats shipping nothing.
+        continue-on-error: true
         env:
           ANDROID_NDK: ${{ steps.ndk.outputs.ndk }}
-        run: bash android/ffmpeg_ndk_build.sh both
+        run: |
+          if bash android/ffmpeg_ndk_build.sh both; then
+            echo "FFMPEG_BUNDLED=yes" >> "$GITHUB_ENV"
+          else
+            echo "::warning::ffmpeg cross-compile failed; APK will ship without on-device ffmpeg"
+            echo "FFMPEG_BUNDLED=no" >> "$GITHUB_ENV"
+          fi
 
       - name: Stage engine + UI into android/
         run: bash android/prepare.sh

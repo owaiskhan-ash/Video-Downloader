@@ -49,10 +49,14 @@ fetch() { # fetch <url> <dest>
 
 build_one() {
   local arch="$1"
-  local triple cpu api
+  # ffarch is ffmpeg's --arch: an architecture FAMILY (aarch64 / arm), not a CPU
+  # name. Passing "armv8-a" there makes configure reject the target outright -
+  # that bug cost a CI run. CPU tuning belongs in --cpu, and is omitted here so
+  # the clang triple's own defaults apply.
+  local triple ffarch api
   case "$arch" in
-    arm64)  triple="aarch64-linux-android";    cpu="armv8-a";  api=21 ;;
-    armv7)  triple="armv7a-linux-androideabi"; cpu="armv7-a";  api=21 ;;
+    arm64)  triple="aarch64-linux-android";    ffarch="aarch64"; api=21 ;;
+    armv7)  triple="armv7a-linux-androideabi"; ffarch="arm";     api=21 ;;
     *) echo "unknown arch: $arch" >&2; return 1 ;;
   esac
 
@@ -77,10 +81,11 @@ build_one() {
   echo "==> [$arch] building x264"
   ( cd "$x264_src" && \
     CC="$cc" ./configure \
-      --host="${triple/-linux-android/-linux-android}" \
+      --host="$triple" \
       --sysroot="$toolchain/sysroot" \
       --prefix="$x264_prefix" \
       --enable-static --disable-cli --disable-opencl \
+      --enable-pic \
       --cross-prefix="" \
       > x264-configure.log 2>&1 && \
     make -j"$JOBS" > x264-make.log 2>&1 && \
@@ -105,8 +110,7 @@ build_one() {
   ( cd "$build" && \
     "$WORK/ffmpeg-$FFMPEG_VERSION/configure" \
       --target-os=android \
-      --arch="$cpu" \
-      --cpu="$cpu" \
+      --arch="$ffarch" \
       --cc="$cc" \
       --cxx="${cc}++" \
       --ar="$toolchain/bin/llvm-ar" \
@@ -114,6 +118,7 @@ build_one() {
       --strip="$toolchain/bin/llvm-strip" \
       --sysroot="$toolchain/sysroot" \
       --enable-cross-compile \
+      --enable-pic \
       --enable-gpl \
       --enable-libx264 \
       --enable-small \
