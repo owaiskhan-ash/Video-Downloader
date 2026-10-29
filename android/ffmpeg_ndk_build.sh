@@ -90,7 +90,7 @@ build_one() {
       > x264-configure.log 2>&1 && \
     make -j"$JOBS" > x264-make.log 2>&1 && \
     make install > x264-install.log 2>&1 ) \
-    || { echo "x264 build failed:" >&2; tail -25 "$x264_src"/x264-*.log >&2; return 1; }
+    || { echo "x264 build failed:" >&2; tail -n 25 "$x264_src"/x264-*.log >&2; return 1; }
 
   # ---- ffmpeg ------------------------------------------------------------
   if [ ! -f "$WORK/ffmpeg.tar.xz" ]; then
@@ -128,7 +128,7 @@ build_one() {
       --extra-ldflags="-L$x264_prefix/lib -static-libstdc++" \
       > configure.log 2>&1 && \
     make -j"$JOBS" > make.log 2>&1 ) \
-    || { echo "ffmpeg build failed:" >&2; tail -25 "$build"/configure.log "$build"/make.log >&2; return 1; }
+    || { echo "ffmpeg build failed:" >&2; tail -n 25 "$build"/configure.log "$build"/make.log >&2; return 1; }
 
   local bin="$build/ffmpeg"
   [ -x "$bin" ] || { echo "ERROR: ffmpeg binary not produced for $arch" >&2; return 1; }
