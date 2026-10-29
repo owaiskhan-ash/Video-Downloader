@@ -21,7 +21,15 @@ permissions:
 jobs:
   apk:
     name: Build APK (python-for-android)
-    runs-on: ubuntu-latest
+    # ubuntu-24.04 ON PURPOSE, not ubuntu-latest.
+    #
+    # p4a's libffi recipe runs autoreconf against libffi's old autotools build
+    # system. The ubuntu-26 image ships autoconf/libtool new enough that
+    # libffi's configure.ac fails with
+    #     possibly undefined macro: LT_SYS_SYMBOL_USCORE
+    # killing the build ~20 minutes in. ubuntu-24.04 carries the toolchain
+    # versions python-for-android is actually tested against.
+    runs-on: ubuntu-24.04
     timeout-minutes: 90
 
     steps:
