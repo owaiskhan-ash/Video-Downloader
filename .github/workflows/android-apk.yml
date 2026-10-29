@@ -50,17 +50,19 @@ jobs:
           python -m pip install buildozer cython setuptools
           buildozer --version
 
-      - name: Locate the NDK
+      - name: Install a pinned NDK
         id: ndk
+        # "Latest installed NDK" is a classic p4a breaker: python-for-android is
+        # validated against specific NDK releases, and runners ship several.
+        # Pin one and install it if absent, so builds are reproducible.
         run: |
-          NDK="$(ls -d "$ANDROID_HOME"/ndk/* 2>/dev/null | sort -V | tail -1)"
-          if [ -z "$NDK" ]; then
-            echo "No preinstalled NDK; installing via sdkmanager"
-            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;26.3.11579264" > /dev/null
-            NDK="$ANDROID_HOME/ndk/26.3.11579264"
+          PINNED="26.1.10909125"
+          if [ ! -d "$ANDROID_HOME/ndk/$PINNED" ]; then
+            echo "installing ndk;$PINNED"
+            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$PINNED" > /dev/null
           fi
-          echo "ndk=$NDK" >> "$GITHUB_OUTPUT"
-          echo "Using NDK: $NDK"
+          echo "ndk=$ANDROID_HOME/ndk/$PINNED" >> "$GITHUB_OUTPUT"
+          echo "Using NDK: $ANDROID_HOME/ndk/$PINNED"
 
       - name: Cache the p4a/buildozer toolchain
         uses: actions/cache@v4
@@ -94,7 +96,33 @@ jobs:
         working-directory: android
         env:
           ANDROID_NDK: ${{ steps.ndk.outputs.ndk }}
+          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk }}
         run: buildozer -v android debug
+
+      - name: Publish build logs on failure
+        # The runner's step logs live on a host that restricted environments
+        # cannot fetch, which makes CI failures here undiagnosable from a
+        # sandbox. So on failure, push the interesting log tails to a ci-logs
+        # branch, which IS readable via plain git.
+        if: failure()
+        run: |
+          {
+            echo "# CI failure log — run ${{ github.run_id }} / ${{ github.ref_name }}"
+            echo
+            echo "== buildozer.log (tail 200) =="
+            tail -200 android/.build/buildozer.log 2>/dev/null || echo "(no buildozer.log)"
+            for f in $(find android/.build -name '*.log' -o -name '*.txt' 2>/dev/null | head -25); do
+              echo
+              echo "== $f (tail 80) =="
+              tail -80 "$f"
+            done
+          } > ci-failure.log
+          wc -l ci-failure.log
+          git config user.name "ci-log-bot"
+          git config user.email "ci@localhost"
+          git add -f ci-failure.log
+          git commit -q -m "ci: failure logs for run ${{ github.run_id }}" || echo "nothing to commit"
+          git push origin HEAD:refs/heads/ci-logs --force || echo "log push failed"
 
       - name: Rename artefact
         id: artefact
