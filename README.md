@@ -65,7 +65,8 @@ used because it has no Python runtime, and the engine *is* Python.
 
 **Installable debug APK:** see the
 [latest release](https://github.com/owaiskhan-ash/Video-Downloader/releases) —
-`video-downloader-<tag>-android-debug.apk`, ~30 MB, `arm64-v8a` + `armeabi-v7a`.
+`video-downloader-<tag>-android-debug.apk`, ~62 MB (half of which is the two
+bundled ffmpeg binaries), `arm64-v8a` + `armeabi-v7a`, Android 7.0+.
 Sideload it (allow "install unknown apps"); it is a debug build, so no keystore.
 
 ```bash

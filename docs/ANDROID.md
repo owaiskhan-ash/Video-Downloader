@@ -102,16 +102,39 @@ Every one of these cost a full ~20-minute CI iteration to find:
 
 ## What the APK contains
 
-| Piece | From | Notes |
+Verified, not assumed: the CI report step opens the built APK and both of its
+payload archives and prints what is inside (`apk-report.txt`, published to the
+`ci-logs` branch on every run). This is what v0.1.21 contained:
+
+| Piece | Where it lives in the APK | Verified contents |
 |---|---|---|
-| CPython + yt-dlp | p4a recipes | yt-dlp is pure Python, installs from PyPI |
-| Web UI | `dist/` | built by Vite, served from the app's own files |
-| Engine + server | `engine/`, `devserver.py` | byte-identical to desktop/browser |
-| ffmpeg | `android/ffmpeg_ndk_build.sh` | static binary per arch, unpacked at first run |
-| WebView | p4a `webview` bootstrap | no Kivy dependency |
+| CPython 3.11.5 | `lib/<abi>/libpython3.11.so` | 5.1 MB (arm64) / 4.0 MB (armv7) |
+| stdlib + site-packages | `lib/<abi>/libpybundle.so` | a **tar**, not a zip: 1363 members, 1202 `.pyc` |
+| yt-dlp 2026.10.26 | inside `libpybundle.so` | 1074 entries under `_python_bundle/site-packages/yt_dlp` |
+| C extensions yt-dlp needs | `libpybundle.so` → `_python_bundle/modules/` | `_ssl`, `_sqlite3`, `_json`, `_asyncio` (`.cpython-311.so`) |
+| OpenSSL 1.1 | `lib/<abi>/libssl1.1.so`, `libcrypto1.1.so` | HTTPS for yt-dlp |
+| App code | `assets/private.tar` | `main.pyc`, `devserver.pyc`, all six `engine/*.pyc`, `sitecustomize.pyc` |
+| Web UI | `assets/private.tar` → `dist/` | `index.html` + the Vite-built JS/CSS |
+| ffmpeg 7.0.2 | `assets/ffmpeg/<arch>/ffmpeg` | arm64 16.5 MB, armv7 15.8 MB, built with libx264 |
+| WebView bootstrap | `classes*.dex`, `lib/<abi>/libmain.so` | no Kivy dependency |
+
+Total: **61.9 MiB**, of which ~32 MB is the two ffmpeg binaries. Per-ABI splits
+would roughly halve that.
 
 Architectures: `arm64-v8a` and `armeabi-v7a`. x86 is omitted — emulators only,
 and it doubles the APK.
+
+Two ffmpeg details that cost CI iterations to find, both now fixed in
+`android/ffmpeg_ndk_build.sh`:
+
+- ffmpeg's `--enable-libx264` test is a **pkg-config** test, so `-I`/`-L` for
+  the x264 prefix are not enough — `PKG_CONFIG_PATH` must point at
+  `<prefix>/lib/pkgconfig`, with `--pkg-config-flags=--static` to resolve
+  `Libs.private` for the static link.
+- Build both arches at **API 24**. At 21, x264's `#define fseek fseeko` fails on
+  armeabi-v7a with `call to undeclared function 'fseeko'`: the NDK only exposes
+  the large-file stdio functions on 32-bit ABIs from API 24 up. arm64 tolerates
+  21, which is why only one arch broke.
 
 ## Design decisions worth knowing
 
@@ -143,8 +166,17 @@ degrades to low-quality pre-merged streams; the status badge says so.
 
 ## Known rough edges
 
+- **This APK has never been run.** CI builds it and reads back its contents, so
+  everything in the table above is verified to *ship*. Nothing here proves the
+  runtime path: that the WebView boots `http://127.0.0.1:8787/`, that the
+  bundled ffmpeg survives the copy-to-files-dir + `chmod 755` step and is
+  executable from app-private storage, that cleartext-to-loopback is accepted by
+  the device's network security config, or that a real download completes. Those
+  need a device or emulator. Treat the first launch as untested.
 - **First launch is slow.** p4a extracts the Python distribution; expect a few
   seconds of blank before the UI appears.
+- **It is a debug build**, signed with the debug key: sideloadable, but not
+  Play-eligible and not updatable over a release build.
 - **No background downloads.** Kill the app and the download dies with it. A p4a
   `service_only` bootstrap could own downloads independently of the UI; that is
   the natural next step.
