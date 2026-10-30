@@ -116,22 +116,21 @@ object NotificationUtil {
 
     private fun post(context: Context, id: Int, notification: Notification) {
         // POST_NOTIFICATIONS is a runtime permission on API 33+ and the user can
-        // decline it. Check rather than lean on runCatching to swallow the
-        // SecurityException: the download does not need notifications to succeed,
-        // so a denial should cost the progress display and nothing else.
-        if (!notificationsAllowed(context)) return
-        runCatching { NotificationManagerCompat.from(context).notify(id, notification) }
-    }
-
-    private fun notificationsAllowed(context: Context): Boolean {
+        // decline it. The download does not need notifications to succeed, so a
+        // denial should cost the progress display and nothing else.
+        //
+        // The guard is inline on purpose: lint will not carry a permission check
+        // across a method boundary, and neither will the next reader.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(
-                context, Manifest.permission.POST_NOTIFICATIONS,
+                context,
+                Manifest.permission.POST_NOTIFICATIONS,
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            return false
+            return
         }
-        return NotificationManagerCompat.from(context).areNotificationsEnabled()
+        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return
+        runCatching { NotificationManagerCompat.from(context).notify(id, notification) }
     }
 
     private fun openAppIntent(context: Context): PendingIntent = PendingIntent.getActivity(

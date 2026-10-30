@@ -213,7 +213,7 @@ jobs:
               grep ': Error:' "$LINT" | head -40 || echo "(none)"
               echo
               echo "-- NewApi / minSdk findings of any severity --"
-              grep -E '\[(NewApi|InlinedApi|UnusedResources|MissingPermission)\]' "$LINT" | head -25 || echo "(none)"
+              grep -E '\[(NewApi|InlinedApi|MissingPermission|StaticFieldLeak)\]' "$LINT" | head -25 || echo "(none)"
               echo
               tail -3 "$LINT"
             else
@@ -260,8 +260,8 @@ jobs:
               echo "-- every error-severity finding --"
               grep ': Error:' "$LINT" | head -80 || echo "(none)"
               echo
-              echo "-- NewApi / InlinedApi / MissingPermission, any severity --"
-              grep -E '\[(NewApi|InlinedApi|MissingPermission)\]' "$LINT" | head -40 || echo "(none)"
+              echo "-- correctness categories, any severity --"
+              grep -E '\[(NewApi|InlinedApi|MissingPermission|StaticFieldLeak)\]' "$LINT" | head -40 || echo "(none)"
               echo
               echo "-- issue ids by frequency --"
               grep -oE '\[[A-Za-z]+\]$' "$LINT" | sort | uniq -c | sort -rn | head -25 || true
