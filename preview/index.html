@@ -596,13 +596,17 @@ function renderHistory(){
 $('#clearHistory').addEventListener('click', () => { history.length = 0; renderHistory(); });
 
 /* ---- settings ---- */
-const SETTINGS = [
-  ['DOWNLOAD', [
-    {t:'toggle', title:'Download audio only', sub:'Extract the audio track and convert it', on:false},
-    {t:'value', title:'Audio format', value:'MP3'},
-    {t:'value', title:'Video format preference', sub:'Maximum compatibility (H.264/AAC mp4)'},
-    {t:'value', title:'Maximum resolution', sub:'Caps the height; falls back if unavailable', value:'Best'},
-  ]],
+// Mirrors SettingsScreen: a short list by default, everything else behind one
+// collapsed expander. Nothing was removed — parity is kept, it is just out of
+// the way, so the screen reads as a short list rather than a wall of toggles.
+const ESSENTIALS = [
+  {t:'toggle', title:'Download audio only', sub:'Extract the audio track and convert it', on:false},
+  {t:'value', title:'Audio format', value:'MP3'},
+  {t:'value', title:'Video format preference', sub:'Maximum compatibility (H.264/AAC mp4)'},
+  {t:'value', title:'Maximum resolution', sub:'Caps the height; falls back if unavailable', value:'Best'},
+  {t:'toggle', title:'Save to Downloads folder', sub:'So your files show up in other apps', on:true},
+];
+const ADVANCED = [
   ['POST-PROCESSING', [
     {t:'toggle', title:'Embed metadata', sub:'Title, uploader and date inside the file', on:true},
     {t:'toggle', title:'Embed thumbnail', sub:'Needs ffmpeg; adds cover art', on:false},
@@ -619,42 +623,53 @@ const SETTINGS = [
     {t:'value', title:'Simultaneous downloads', sub:'How many downloads run at once', value:'2'},
     {t:'value', title:'Speed limit', sub:'Empty means unlimited', value:'—'},
   ]],
-  ['STORAGE', [
-    {t:'toggle', title:'Save to public Downloads', sub:'Copies finished files into Downloads/Teal so other apps can see them. Off keeps them in app-private storage only.', on:true},
+  ['FILENAMES', [
     {t:'value', title:'Filename template', sub:'yt-dlp output template', value:'%(title)s.%(ext)s'},
   ]],
   ['PLAYLISTS', [
     {t:'toggle', title:'Ignore playlists', sub:'Only take the single video from a playlist URL', on:true},
     {t:'value', title:'Playlist items', sub:'Overrides the above, e.g. 1-5,8', value:'—'},
   ]],
-  ['ADVANCED', [
+  ['EXPERT', [
     {t:'link', title:'Command templates', sub:'Reusable raw yt-dlp arguments', screen:'s-templates'},
     {t:'toggle', title:'Restrict filenames', sub:'ASCII only, no spaces', on:false},
     {t:'value', title:'Proxy', value:'—'},
     {t:'value', title:'User agent', value:'—'},
-    {t:'value', title:'Cookies file', sub:'For sites that need an account', value:'—'},
+    {t:'value', title:'Cookies file', sub:'Only if a site genuinely needs your account', value:'—'},
     {t:'value', title:'Extra arguments', sub:'Appended last, so they override everything', value:'—'},
   ]],
 ];
-$('#settingsBody').innerHTML = SETTINGS.map(([group, rows]) => `
-  <div class="section">${group}</div>
-  <div class="card">${rows.map((r,i) => r.t === 'toggle'
-    ? `<div class="row-click" style="${i?'':''}"><div class="left"><div class="t">${r.title}</div>${r.sub?`<div class="s">${r.sub}</div>`:''}</div>
-       <div class="switch${r.on?' on':''}" data-k="${group}-${i}"><i></i></div></div>`
-    : r.t === 'link'
-    ? `<div class="row-click" data-goto="${r.screen}"><div class="left"><div class="t">${r.title}</div>${r.sub?`<div class="s">${r.sub}</div>`:''}</div>
-       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.2" style="flex:none"><path d="m9 6 6 6-6 6"/></svg></div>`
-    : `<div class="row-click"><div class="left"><div class="t">${r.title}</div>${r.sub?`<div class="s">${r.sub}</div>`:''}</div>
-       ${r.value?`<span class="v">${r.value}</span>`:''}</div>`
-  ).join('<div class="divider"></div>')}</div>`).join('') + `
+const rowHtml = r => r.t === 'toggle'
+  ? `<div class="row-click"><div class="left"><div class="t">${r.title}</div>${r.sub?`<div class="s">${r.sub}</div>`:''}</div>
+     <div class="switch${r.on?' on':''}"><i></i></div></div>`
+  : r.t === 'link'
+  ? `<div class="row-click" data-goto="${r.screen}"><div class="left"><div class="t">${r.title}</div>${r.sub?`<div class="s">${r.sub}</div>`:''}</div>
+     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.2" style="flex:none"><path d="m9 6 6 6-6 6"/></svg></div>`
+  : `<div class="row-click"><div class="left"><div class="t">${r.title}</div>${r.sub?`<div class="s">${r.sub}</div>`:''}</div>
+     ${r.value?`<span class="v">${r.value}</span>`:''}</div>`;
+const cardHtml = rows => `<div class="card">${rows.map(rowHtml).join('<div class="divider"></div>')}</div>`;
+
+$('#settingsBody').innerHTML = `
+  <div class="section">DOWNLOAD</div>
+  ${cardHtml(ESSENTIALS)}
+  <div class="card">
+    <div class="row-click" id="advToggle">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" style="flex:none"><path d="M3 7h18M3 12h18M3 17h18"/><circle cx="8" cy="7" r="2" fill="var(--container)"/><circle cx="15" cy="12" r="2" fill="var(--container)"/><circle cx="10" cy="17" r="2" fill="var(--container)"/></svg>
+      <div class="left"><div class="t">Advanced settings</div><div class="s" id="advSub">Subtitles, playlists, network, storage, templates</div></div>
+      <svg id="advChevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--on-surface-variant)" stroke-width="2.2" style="flex:none;transition:transform .18s"><path d="m6 9 6 6 6-6"/></svg>
+    </div>
+  </div>
+  <div id="advBody" style="display:none">
+    ${ADVANCED.map(([g,rows]) => `<div class="section">${g}</div>${cardHtml(rows)}`).join('')}
+  </div>
   <div class="section">ABOUT</div>
   <div class="card">
-    <div class="row-click"><div class="left"><div class="t">Teal</div></div><span class="v">0.2.1</span></div>
+    <div class="row-click"><div class="left"><div class="t">Teal</div></div><span class="v">0.3.0</span></div>
     <div class="divider"></div>
     <div class="row-click"><div class="left"><div class="t">yt-dlp</div></div><span class="v" id="ytdlpVer">2024.08.06</span></div>
     <div style="display:flex;align-items:center;gap:12px;padding:4px 0 10px">
-      <p class="detail" style="margin:0;flex:1">The bundled copy is frozen at build time. Updating
-        fetches the newest yt-dlp, which is the first thing to try when a site suddenly stops working.</p>
+      <p class="detail" style="margin:0;flex:1">Teal keeps this current on its own: it refreshes on first
+        run, weekly after that, and again by itself if a site stops working. This button just does it now.</p>
       <button class="textbtn" id="ytdlpUpdate" style="flex:none">Update</button>
     </div>
     <div class="detail" id="ytdlpMsg" style="color:var(--primary);display:none;padding-bottom:6px"></div>
@@ -663,6 +678,17 @@ $('#settingsBody').innerHTML = SETTINGS.map(([group, rows]) => `
       ffmpeg and aria2c libraries it embeds are GPL-licensed. It is an independent implementation and is not
       affiliated with yt-dlp or Seal.</p>
   </div>`;
+
+// The expander: collapsed by default so the screen stays short.
+$('#advToggle').addEventListener('click', () => {
+  const body = $('#advBody'), wasOpen = body.style.display !== 'none';
+  body.style.display = wasOpen ? 'none' : 'block';
+  $('#advChevron').style.transform = wasOpen ? '' : 'rotate(180deg)';
+  $('#advSub').textContent = wasOpen
+    ? 'Subtitles, playlists, network, storage, templates'
+    : 'Tap to hide';
+});
+
 $$('#settingsBody .switch').forEach(sw => sw.addEventListener('click', e => {
   e.stopPropagation(); sw.classList.toggle('on');
 }));

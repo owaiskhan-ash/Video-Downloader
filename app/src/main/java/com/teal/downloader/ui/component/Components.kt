@@ -274,6 +274,7 @@ fun ClickableRow(
     subtitle: String? = null,
     value: String? = null,
     leadingIcon: ImageVector? = null,
+    trailingIcon: ImageVector? = null,
     enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
@@ -319,6 +320,15 @@ fun ClickableRow(
                 value,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
+            )
+        }
+        if (trailingIcon != null) {
+            Spacer(Modifier.width(8.dp))
+            Icon(
+                trailingIcon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha),
+                modifier = Modifier.size(20.dp),
             )
         }
     }

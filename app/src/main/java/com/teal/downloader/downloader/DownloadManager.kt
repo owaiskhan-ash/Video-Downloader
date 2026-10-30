@@ -207,7 +207,13 @@ object DownloadManager {
         } catch (error: DownloadException) {
             fail(id, request, error.message ?: "Download failed")
         } catch (error: Exception) {
-            fail(id, request, DownloadException.classify(error.message ?: error.javaClass.simpleName, request.url))
+            fail(
+                id,
+                request,
+                DownloadException
+                    .classify(error.message ?: error.javaClass.simpleName, request.url)
+                    .message,
+            )
         } finally {
             jobs.remove(id)
             dispatch()
