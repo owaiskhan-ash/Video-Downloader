@@ -1,6 +1,5 @@
 package com.teal.downloader.data.db
 
-import android.annotation.SuppressLint
 import android.content.Context
 import androidx.room.Dao
 import androidx.room.Database
@@ -87,9 +86,6 @@ abstract class TealDatabase : RoomDatabase() {
     abstract fun commandTemplateDao(): CommandTemplateDao
 
     companion object {
-        // Built from context.applicationContext below, so this static reference
-        // cannot pin an Activity. Lint cannot see that from the field alone.
-        @SuppressLint("StaticFieldLeak")
         @Volatile
         private var instance: TealDatabase? = null
 

@@ -206,8 +206,10 @@ jobs:
             echo '```'
             LINT=app/build/reports/lint-results-debug.txt
             if [ -f "$LINT" ]; then
-              echo "errors:   $(grep -c ': Error:' "$LINT" 2>/dev/null || echo 0)"
-              echo "warnings: $(grep -c ': Warning:' "$LINT" 2>/dev/null || echo 0)"
+              # "|| true", not "|| echo 0": grep -c already prints 0 before
+              # exiting nonzero, so the fallback was emitting a second line.
+              echo "errors:   $(grep -c ': Error:' "$LINT" 2>/dev/null || true)"
+              echo "warnings: $(grep -c ': Warning:' "$LINT" 2>/dev/null || true)"
               echo
               echo "-- error-severity findings --"
               grep ': Error:' "$LINT" | head -40 || echo "(none)"
@@ -254,8 +256,10 @@ jobs:
             echo "== lint =="
             LINT=app/build/reports/lint-results-debug.txt
             if [ -f "$LINT" ]; then
-              echo "errors:   $(grep -c ': Error:' "$LINT" 2>/dev/null || echo 0)"
-              echo "warnings: $(grep -c ': Warning:' "$LINT" 2>/dev/null || echo 0)"
+              # "|| true", not "|| echo 0": grep -c already prints 0 before
+              # exiting nonzero, so the fallback was emitting a second line.
+              echo "errors:   $(grep -c ': Error:' "$LINT" 2>/dev/null || true)"
+              echo "warnings: $(grep -c ': Warning:' "$LINT" 2>/dev/null || true)"
               echo
               echo "-- every error-severity finding --"
               grep ': Error:' "$LINT" | head -80 || echo "(none)"
