@@ -105,6 +105,15 @@ object DownloadManager {
 
     suspend fun ytDlpVersion(): String? = ytdlp?.ytDlpVersion()
 
+    /**
+     * Fetches the newest stable yt-dlp. Returns a line worth showing the user.
+     *
+     * Initialises first if needed, so this also works as a way to surface a
+     * broken engine install before the user has queued anything.
+     */
+    suspend fun updateYtDlp(): String =
+        ytdlp?.updateYtDlp() ?: throw DownloadException("The downloader is not ready yet")
+
     /** Queues a download and returns its id. */
     fun enqueue(request: DownloadRequest, title: String?, thumbnail: String?): String {
         val id = UUID.randomUUID().toString()

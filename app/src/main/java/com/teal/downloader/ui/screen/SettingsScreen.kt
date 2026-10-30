@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
@@ -70,6 +71,8 @@ fun SettingsScreen(viewModel: MainViewModel, onOpenTemplates: () -> Unit) {
     val publishToDownloads by viewModel.publishToDownloads.collectAsStateWithLifecycle()
     val maxConcurrent by viewModel.maxConcurrentDownloads.collectAsStateWithLifecycle()
     val ytDlpVersion by viewModel.ytDlpVersion.collectAsStateWithLifecycle()
+    val ytDlpUpdateState by viewModel.ytDlpUpdateState.collectAsStateWithLifecycle()
+    val ytDlpUpdating by viewModel.ytDlpUpdating.collectAsStateWithLifecycle()
     var dialog by remember { mutableStateOf<SettingsDialog?>(null) }
 
     Column(Modifier.fillMaxSize()) {
@@ -397,6 +400,38 @@ fun SettingsScreen(viewModel: MainViewModel, onOpenTemplates: () -> Unit) {
                         title = "yt-dlp",
                         value = ytDlpVersion ?: "unpacked on first download",
                     )
+                    Row(
+                        Modifier.fillMaxWidth().padding(bottom = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            "The bundled copy is frozen at build time. Updating fetches the " +
+                                "newest yt-dlp, which is the first thing to try when a site " +
+                                "suddenly stops working.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        TextButton(
+                            onClick = viewModel::updateYtDlp,
+                            enabled = !ytDlpUpdating,
+                        ) {
+                            Text(
+                                if (ytDlpUpdating) "Updating…" else "Update",
+                                color = if (ytDlpUpdating) MaterialTheme.colorScheme.onSurfaceVariant
+                                else MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                    if (ytDlpUpdateState != null) {
+                        Text(
+                            ytDlpUpdateState ?: "",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(bottom = 6.dp),
+                        )
+                    }
                     Divider()
                     Text(
                         "Teal is free software under the GNU GPL-3.0, because the yt-dlp, ffmpeg and " +

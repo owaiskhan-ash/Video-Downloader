@@ -649,9 +649,15 @@ $('#settingsBody').innerHTML = SETTINGS.map(([group, rows]) => `
   ).join('<div class="divider"></div>')}</div>`).join('') + `
   <div class="section">ABOUT</div>
   <div class="card">
-    <div class="row-click"><div class="left"><div class="t">Teal</div></div><span class="v">0.1.0</span></div>
+    <div class="row-click"><div class="left"><div class="t">Teal</div></div><span class="v">0.2.1</span></div>
     <div class="divider"></div>
-    <div class="row-click"><div class="left"><div class="t">yt-dlp</div></div><span class="v">unpacked on first download</span></div>
+    <div class="row-click"><div class="left"><div class="t">yt-dlp</div></div><span class="v" id="ytdlpVer">2024.08.06</span></div>
+    <div style="display:flex;align-items:center;gap:12px;padding:4px 0 10px">
+      <p class="detail" style="margin:0;flex:1">The bundled copy is frozen at build time. Updating
+        fetches the newest yt-dlp, which is the first thing to try when a site suddenly stops working.</p>
+      <button class="textbtn" id="ytdlpUpdate" style="flex:none">Update</button>
+    </div>
+    <div class="detail" id="ytdlpMsg" style="color:var(--primary);display:none;padding-bottom:6px"></div>
     <div class="divider"></div>
     <p class="detail" style="margin-top:12px">Teal is free software under the GNU GPL-3.0, because the yt-dlp,
       ffmpeg and aria2c libraries it embeds are GPL-licensed. It is an independent implementation and is not
@@ -665,6 +671,21 @@ $$('#settingsBody [data-goto]').forEach(el =>
 
 // Command templates has no tab of its own, so it needs an explicit way back.
 $('#tplBack').addEventListener('click', () => showScreen('s-settings'));
+
+// Mirrors MainViewModel.updateYtDlp(): the button disables while running and the
+// result is reported inline rather than in a dialog.
+$('#ytdlpUpdate').addEventListener('click', () => {
+  const btn = $('#ytdlpUpdate'), msg = $('#ytdlpMsg');
+  btn.disabled = true; btn.textContent = 'Updating…';
+  msg.style.display = 'none';
+  setTimeout(() => {
+    const v = new Date().toISOString().slice(0,10).replace(/-/g,'.');
+    $('#ytdlpVer').textContent = v;
+    msg.textContent = 'Updated yt-dlp to ' + v;
+    msg.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Update';
+  }, 1400);
+});
 
 function switchTab(id){ showScreen(id); }
 syncField();
