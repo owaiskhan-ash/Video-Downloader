@@ -47,6 +47,13 @@ object DownloadManager {
     private var ytdlp: YtdlpManager? = null
     private var settingsRepo: SettingsRepository? = null
 
+    /** Guards [init] against a second Application.onCreate in the same process. */
+    private var started = false
+
+    /** Mirrors the two preferences the queue needs outside a coroutine. */
+    @Volatile private var maxConcurrent = 2
+    @Volatile private var publishToDownloads = true
+
     /** Room DAO, created on first use (needs Context, so not a plain `lazy`). */
     private var historyDao: com.teal.downloader.data.db.HistoryDao? = null
 
@@ -78,11 +85,15 @@ object DownloadManager {
      */
     suspend fun fetchInfo(
         url: String,
-        settings: com.teal.downloader.data.model.DownloadSettings = currentSettings(),
+        settings: com.teal.downloader.data.model.DownloadSettings? = null,
         flatPlaylist: Boolean = false,
-    ): com.teal.downloader.data.model.YtdlInfo =
-        ytdlp?.fetchInfo(url, settings, flatPlaylist)
+    ): com.teal.downloader.data.model.YtdlInfo {
+        // Resolved here rather than in a default value: Kotlin forbids suspend
+        // calls in default parameter expressions.
+        val resolved = settings ?: currentSettings()
+        return ytdlp?.fetchInfo(url, resolved, flatPlaylist)
             ?: throw DownloadException("The downloader is not ready yet")
+    }
 
     suspend fun ytDlpVersion(): String? = ytdlp?.ytDlpVersion()
 

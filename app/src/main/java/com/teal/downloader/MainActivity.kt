@@ -9,7 +9,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import com.teal.downloader.ui.MainViewModel
-import com.teal.downloader.ui.TealAppRoot
+import com.teal.downloader.ui.navigation.TealAppRoot
 import com.teal.downloader.ui.theme.TealTheme
 
 /**

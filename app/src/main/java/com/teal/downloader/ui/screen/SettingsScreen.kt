@@ -372,19 +372,19 @@ fun SettingsScreen(viewModel: MainViewModel, onOpenTemplates: () -> Unit) {
                         onCheckedChange = { v -> viewModel.updateSettings { it.copy(restrictFilenames = v) } },
                     )
                     Divider()
-                    textSettingRow(viewModel, "Proxy", settings.proxy, "socks5://127.0.0.1:1080") { v ->
-                        it.copy(proxy = v)
+                    textSettingRow(viewModel, "Proxy", settings.proxy, "socks5://127.0.0.1:1080") { s, v ->
+                        s.copy(proxy = v)
                     }
                     Divider()
-                    textSettingRow(viewModel, "User agent", settings.userAgent, "Custom UA string") { v ->
-                        it.copy(userAgent = v)
+                    textSettingRow(viewModel, "User agent", settings.userAgent, "Custom UA string") { s, v ->
+                        s.copy(userAgent = v)
                     }
                     Divider()
                     textSettingRow(viewModel, "Cookies file", settings.cookiesFile,
-                        "/sdcard/Download/cookies.txt") { v -> it.copy(cookiesFile = v) }
+                        "/sdcard/Download/cookies.txt") { s, v -> s.copy(cookiesFile = v) }
                     Divider()
                     textSettingRow(viewModel, "Extra arguments", settings.customArguments,
-                        "--write-thumbnail", multiline = true) { v -> it.copy(customArguments = v) }
+                        "--write-thumbnail", multiline = true) { s, v -> s.copy(customArguments = v) }
                 }
             }
 

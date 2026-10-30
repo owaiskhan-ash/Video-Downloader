@@ -274,12 +274,16 @@ fun ClickableRow(
     subtitle: String? = null,
     value: String? = null,
     leadingIcon: ImageVector? = null,
+    enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
+    // Dimmed rather than hidden when disabled: the setting is still visible, it
+    // just does not apply right now (e.g. aria2c connections when aria2c is off).
+    val alpha = if (enabled) 1f else 0.4f
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -287,19 +291,23 @@ fun ClickableRow(
             Icon(
                 leadingIcon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+                tint = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
                 modifier = Modifier.size(20.dp),
             )
             Spacer(Modifier.width(14.dp))
         }
         Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+            Text(
+                title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
+            )
             if (subtitle != null) {
                 Spacer(Modifier.height(2.dp))
                 Text(
                     subtitle,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -310,7 +318,7 @@ fun ClickableRow(
             Text(
                 value,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
             )
         }
     }
