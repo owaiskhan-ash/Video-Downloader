@@ -197,8 +197,24 @@ class DownloadException(message: String) : Exception(message) {
             val lower = text.lowercase()
             return when {
                 "unsupported url" in lower -> "This site or URL is not supported by yt-dlp"
+
+                // The commonest real-world failure. The bundled yt-dlp is frozen
+                // at build time while sites keep changing their players, so the
+                // symptom is an extraction error and the fix is the in-app
+                // updater. Naming the symptom alone would be a dead end.
+                "unable to extract" in lower || "nsig" in lower ||
+                    ("signature" in lower && "extract" in lower) ||
+                    "initial data" in lower || "please update" in lower ||
+                    "update yt-dlp" in lower ->
+                    "yt-dlp could not read that page. Try Update under Settings › About — " +
+                        "the bundled yt-dlp is older than this site's current layout."
+
                 "sign in" in lower || "login" in lower || "account" in lower ->
-                    "This video needs an account — add a cookies file in Settings"
+                    "This video needs an account. Add a cookies file in Settings, or try " +
+                        "updating yt-dlp first if the site is asking everyone to sign in."
+
+                "requested format is not available" in lower || "no video formats" in lower ->
+                    "That quality is not available for this video — pick a different one"
                 "private video" in lower -> "That video is private"
                 "members-only" in lower || "members only" in lower -> "That video is members-only"
                 "age" in lower && "restrict" in lower -> "That video is age-restricted"
