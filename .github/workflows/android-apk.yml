@@ -1,0 +1,153 @@
+name: android-apk
+
+# Builds the Teal debug APK and attaches it to the release for the pushed tag.
+#
+# There is no gradle wrapper in this repo on purpose: gradle-wrapper.jar is a
+# binary blob, and `gradle/actions/setup-gradle` installs a pinned Gradle
+# directly, which is both smaller in git and easier to bump.
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apk-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GRADLE_VERSION: '8.9'
+  # AGP 8.7 requires JDK 17; the runner default has moved past that.
+  JAVA_VERSION: '17'
+  COMPILE_SDK: '35'
+  BUILD_TOOLS: '35.0.0'
+
+jobs:
+  apk:
+    name: Build APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Set up Gradle ${{ env.GRADLE_VERSION }}
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: ${{ env.GRADLE_VERSION }}
+          cache-read-only: ${{ github.ref_type == 'tag' }}
+
+      - name: Install the SDK packages the build needs
+        run: |
+          set -x
+          SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          echo "SDK: $SDK"
+          # Licences must be accepted before anything can be installed; the
+          # runner image usually has them already, but a fresh SDK does not.
+          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
+          "$SDK/cmdline-tools/latest/bin/sdkmanager" \
+            "platforms;android-$COMPILE_SDK" \
+            "build-tools;$BUILD_TOOLS" \
+            "platform-tools" 2>&1 | tail -5
+          ls "$SDK/platforms" "$SDK/build-tools"
+
+      - name: Run unit tests and build the APK
+        run: |
+          # tee, don't just run: step logs live on a host that restricted
+          # environments cannot fetch, so the console output has to be captured
+          # here for the failure-report step to republish it.
+          set +e
+          gradle --no-daemon --stacktrace \
+            :app:testDebugUnitTest \
+            :app:assembleDebug 2>&1 | tee build-console.log
+          status=${PIPESTATUS[0]}
+          echo "gradle exit: $status"
+          exit "$status"
+
+      - name: Publish build logs on failure
+        # The only way to see a failure from a sandbox that cannot reach the
+        # Actions log host: push the interesting output to a ci-logs branch.
+        if: failure()
+        run: |
+          {
+            echo "# CI failure log — run ${{ github.run_id }} / ${{ github.ref_name }}"
+            echo
+            echo "== gradle console (tail 500) =="
+            tail -n 500 build-console.log 2>/dev/null || echo "(no console log)"
+            echo
+            echo "== unit test results =="
+            for f in $(find app/build/test-results -name '*.xml' 2>/dev/null | head -20); do
+              echo "-- $f --"
+              grep -oE '(testcase name="[^"]*"|<failure[^>]*message="[^"]{0,400})' "$f" | head -40
+            done
+            echo
+            echo "== outputs =="
+            find app/build/outputs -type f 2>/dev/null | head -40 || echo "(none)"
+            echo
+            echo "== environment =="
+            df -h / | tail -1
+            java -version 2>&1 | head -2
+            gradle --version 2>&1 | grep -E "Gradle|JVM:" || true
+          } > ci-failure.log
+          wc -l ci-failure.log
+          git config user.name "ci-log-bot"
+          git config user.email "ci@localhost"
+          git add -f ci-failure.log
+          git commit -q -m "ci: failure logs for run ${{ github.run_id }}" || echo "nothing to commit"
+          git push origin HEAD:refs/heads/ci-logs --force || echo "log push failed"
+
+      - name: Collect and rename the APKs
+        id: artefacts
+        run: |
+          set -x
+          TAG="${GITHUB_REF_NAME:-$(git rev-parse --short HEAD)}"
+          mkdir -p release
+          # ABI splits produce one APK per architecture; name each so a user
+          # knows which one to install.
+          count=0
+          for apk in app/build/outputs/apk/debug/*.apk; do
+            [ -e "$apk" ] || continue
+            base="$(basename "$apk" .apk)"
+            abi="$(echo "$base" | grep -oE 'arm64-v8a|armeabi-v7a|x86_64|x86' | head -1)"
+            abi="${abi:-universal}"
+            out="release/teal-${TAG}-${abi}-debug.apk"
+            cp "$apk" "$out"
+            count=$((count + 1))
+          done
+          if [ "$count" -eq 0 ]; then
+            echo "ERROR: no APK produced"
+            find app/build/outputs -type f 2>/dev/null | head -40
+            exit 1
+          fi
+          ls -la release/
+          sha256sum release/*.apk | tee release/SHA256SUMS.txt
+
+      - name: Upload APKs as workflow artefacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: teal-android-debug-apks
+          path: release/
+          retention-days: 30
+
+      - name: Attach APKs to the release for this tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release view "$TAG" > /dev/null 2>&1 || \
+            gh release create "$TAG" --title "$TAG" --generate-notes
+          gh release upload "$TAG" release/*.apk release/SHA256SUMS.txt --clobber
+          echo "Attached to release $TAG:"
+          gh release view "$TAG" --json assets -q '.assets[].name'

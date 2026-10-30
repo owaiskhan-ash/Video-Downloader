@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Paths FileProvider may hand out as content:// Uris. Needed so a finished
+     file can be opened or shared without exposing a file:// path, which other
+     apps cannot read under scoped storage. -->
+<paths>
+    <external-files-path
+        name="teal_downloads"
+        path="Download/Teal" />
+    <external-files-path
+        name="teal_downloads_root"
+        path="." />
+    <files-path
+        name="internal_downloads"
+        path="downloads" />
+    <external-path
+        name="public_downloads"
+        path="Download" />
+    <cache-path
+        name="cache"
+        path="." />
+</paths>

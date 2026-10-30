@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Download glyph: arrow into a tray. Drawn with strokes so it scales cleanly
+     inside the 108dp adaptive-icon safe zone (inner 72dp). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M54,30 L54,62"
+        android:strokeColor="#FF2DD4BF"
+        android:strokeWidth="8"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M40,50 L54,64 L68,50"
+        android:strokeColor="#FF2DD4BF"
+        android:strokeWidth="8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M34,78 L74,78"
+        android:strokeColor="#FF2DD4BF"
+        android:strokeWidth="8"
+        android:strokeLineCap="round" />
+</vector>

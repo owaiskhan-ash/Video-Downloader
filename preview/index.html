@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teal — Android UI preview</title>
+<style>
+  /* Palette mirrors app/src/main/java/com/teal/downloader/ui/theme/Color.kt
+     exactly, so what you see here is what the Compose app renders. */
+  :root{
+    --bg:#08110F; --surface:#0C1715; --surface-variant:#172624;
+    --container:#121E1C; --container-high:#1A2826; --container-highest:#223130;
+    --container-low:#0E1A18; --container-lowest:#050D0C;
+    --primary:#2DD4BF; --on-primary:#00201B; --primary-container:#0E4139;
+    --on-primary-container:#A7F5E6;
+    --on-surface:#D7F2EC; --on-surface-variant:#A3BDB7;
+    --outline:#2E534C; --outline-variant:#1C332F;
+    --error:#FFB4AB; --tertiary:#93DDFF;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:#04090A; color:var(--on-surface);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    display:flex; align-items:center; justify-content:center; gap:40px;
+    min-height:100vh; padding:32px 20px; flex-wrap:wrap;
+  }
+  .side{max-width:330px}
+  .side h1{font-size:26px;font-weight:600;color:var(--primary);letter-spacing:-.3px}
+  .side h1 span{color:var(--on-surface-variant);font-size:14px;font-weight:400;display:block;margin-top:6px;letter-spacing:0}
+  .side p{font-size:13.5px;line-height:1.65;color:var(--on-surface-variant);margin-top:16px}
+  .side ul{margin:14px 0 0 18px;font-size:13px;line-height:1.8;color:var(--on-surface-variant)}
+  .side code{background:var(--container);padding:1px 6px;border-radius:6px;color:var(--primary);font-size:12px}
+  .badge{display:inline-block;margin-top:18px;padding:7px 13px;border:1px solid var(--outline);
+    border-radius:999px;font-size:11.5px;color:var(--primary);letter-spacing:.3px}
+
+  /* ---- phone frame ---- */
+  .phone{
+    width:390px;height:844px;background:var(--bg);border-radius:44px;
+    border:1px solid var(--outline-variant);overflow:hidden;position:relative;
+    box-shadow:0 40px 90px rgba(0,0,0,.75), 0 0 0 10px #0B0F10, 0 0 0 11px #1D2A28;
+    display:flex;flex-direction:column;
+  }
+  .statusbar{height:34px;flex:none;display:flex;align-items:center;justify-content:space-between;
+    padding:0 22px;font-size:12px;color:var(--on-surface);font-weight:500}
+  .statusbar .dots{display:flex;gap:5px;align-items:center}
+  .dot{width:4px;height:4px;border-radius:50%;background:var(--on-surface-variant)}
+  .screen{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
+  .screen::-webkit-scrollbar{display:none}
+  .screen{display:none;padding:0 16px 24px}
+  .screen.active{display:block}
+
+  header.appbar{padding:10px 4px 14px;position:sticky;top:0;background:var(--bg);z-index:5}
+  header.appbar h2{font-size:20px;font-weight:600;color:var(--primary)}
+  header.appbar p{font-size:11.5px;color:var(--on-surface-variant);margin-top:2px}
+  header.appbar .row{display:flex;align-items:flex-start;justify-content:space-between}
+  header.appbar .actions{display:flex;gap:4px}
+  .textbtn{background:none;border:none;color:var(--primary);font-size:13px;font-weight:500;
+    padding:8px 10px;border-radius:10px;cursor:pointer;font-family:inherit}
+  .textbtn.danger{color:var(--error)}
+  .textbtn:disabled{color:var(--on-surface-variant);opacity:.5;cursor:default}
+
+  .card{background:var(--container);border-radius:20px;padding:16px;margin-bottom:12px}
+  .section{font-size:11px;font-weight:600;letter-spacing:.6px;color:var(--primary);
+    padding:14px 4px 7px;text-transform:uppercase}
+
+  /* teal-outlined input, teal text when focused */
+  .field{position:relative}
+  .field input,.field textarea{
+    width:100%;background:var(--container-low);border:1px solid var(--outline);
+    border-radius:16px;padding:20px 92px 12px 16px;color:var(--on-surface);
+    font-size:15px;font-family:inherit;outline:none;transition:border-color .18s,color .18s;
+  }
+  .field textarea{min-height:92px;resize:none;padding:20px 16px 12px}
+  .field input:focus,.field textarea:focus{border-color:var(--primary);color:var(--primary)}
+  .field label{position:absolute;left:16px;top:15px;font-size:14px;color:var(--on-surface-variant);
+    pointer-events:none;transition:.18s}
+  .field input:focus+label,.field.filled label{top:6px;font-size:11px;color:var(--primary)}
+  .field.filled input{color:var(--on-surface)}
+  .field.filled input:focus{color:var(--primary)}
+  .field .trailing{position:absolute;right:6px;top:9px;display:flex;gap:2px}
+  .iconbtn{background:none;border:none;cursor:pointer;padding:7px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;color:var(--primary)}
+  .iconbtn.muted{color:var(--on-surface-variant)}
+  .iconbtn:hover{background:var(--container-high)}
+  .iconbtn svg{width:19px;height:19px}
+  .hint{font-size:11.5px;color:var(--error);margin-top:6px;padding-left:4px;min-height:0}
+
+  .btnrow{display:flex;gap:10px;margin:12px 0}
+  .btn{flex:1;height:52px;border-radius:16px;font-size:14px;font-weight:600;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit;
+    transition:filter .15s,opacity .15s}
+  .btn svg{width:18px;height:18px}
+  .btn.primary{background:var(--primary);color:var(--on-primary);border:none}
+  .btn.secondary{background:transparent;color:var(--primary);border:1px solid var(--outline)}
+  .btn:hover{filter:brightness(1.1)}
+  .btn:disabled{background:var(--container-high);color:var(--on-surface-variant);border-color:transparent;cursor:default;filter:none}
+  .btn.secondary:disabled{background:transparent;border-color:var(--outline-variant)}
+
+  .thumb{width:132px;height:74px;border-radius:12px;flex:none;
+    background:linear-gradient(135deg,var(--primary-container),var(--surface-variant));
+    display:flex;align-items:center;justify-content:center;color:var(--primary);position:relative;overflow:hidden}
+  .thumb::after{content:"";position:absolute;inset:0;
+    background:radial-gradient(circle at 30% 30%,rgba(45,212,191,.35),transparent 60%)}
+  .thumb svg{width:26px;height:26px;z-index:1}
+  .info{display:flex;gap:12px}
+  .info .meta{flex:1;min-width:0}
+  .info h3{font-size:16px;font-weight:500;line-height:1.35;color:var(--on-surface);
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .info .sub{font-size:12.5px;color:var(--on-surface-variant);margin-top:5px}
+  .tags{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+  .tag{border:1px solid var(--outline);background:var(--container-low);color:var(--primary);
+    font-size:11px;font-weight:500;padding:3px 9px;border-radius:8px}
+  .tag.muted{color:var(--on-surface-variant)}
+  .tag.err{color:var(--error);border-color:#4A2622}
+
+  .progress{height:6px;border-radius:3px;background:var(--container-highest);overflow:hidden;margin-top:12px}
+  .progress i{display:block;height:100%;background:var(--primary);border-radius:3px;
+    transition:width .35s ease;width:0}
+  .progress.indet i{width:35%;animation:slide 1.15s infinite ease-in-out}
+  @keyframes slide{0%{margin-left:-35%}100%{margin-left:100%}}
+  .detail{font-size:12.5px;color:var(--on-surface-variant);margin-top:8px;line-height:1.5}
+  .detail.err{color:var(--error)}
+  .actions-end{display:flex;justify-content:flex-end;gap:2px;margin-top:6px}
+
+  .empty{display:flex;flex-direction:column;align-items:center;text-align:center;padding:56px 32px}
+  .empty .glyph{width:72px;height:72px;border-radius:24px;background:var(--container);
+    display:flex;align-items:center;justify-content:center;color:var(--primary);margin-bottom:16px}
+  .empty .glyph svg{width:32px;height:32px}
+  .empty h3{font-size:16px;font-weight:500;color:var(--on-surface)}
+  .empty p{font-size:13px;color:var(--on-surface-variant);margin-top:7px;line-height:1.6}
+
+  .row-click{display:flex;align-items:center;justify-content:space-between;padding:14px 0;cursor:pointer;gap:12px}
+  .row-click+.row-click,.divider+.row-click{border-top:none}
+  .row-click .t{font-size:15px;color:var(--on-surface)}
+  .row-click .s{font-size:12.5px;color:var(--on-surface-variant);margin-top:2px;line-height:1.5}
+  .row-click .v{font-size:12.5px;color:var(--primary);white-space:nowrap;font-weight:500}
+  .row-click:active{opacity:.7}
+  .divider{height:1px;background:var(--outline-variant);margin:2px 0}
+  .left{flex:1;min-width:0}
+
+  .switch{width:46px;height:26px;border-radius:14px;background:var(--container-highest);
+    border:1px solid var(--outline);position:relative;cursor:pointer;transition:.2s;flex:none}
+  .switch i{position:absolute;top:3px;left:4px;width:18px;height:18px;border-radius:50%;
+    background:var(--on-surface-variant);transition:.2s}
+  .switch.on{background:var(--primary);border-color:var(--primary)}
+  .switch.on i{left:23px;background:var(--on-primary)}
+
+  .nav{flex:none;height:74px;background:var(--container);display:flex;border-top:1px solid var(--outline-variant)}
+  .nav button{flex:1;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:4px;color:var(--on-surface-variant);font-family:inherit;
+    font-size:10.5px;padding-top:8px;position:relative}
+  .nav button svg{width:22px;height:22px}
+  .nav button.active{color:var(--primary)}
+  .nav button.active::before{content:"";position:absolute;top:8px;width:56px;height:28px;
+    border-radius:999px;background:var(--primary-container);z-index:0}
+  .nav button.active svg,.nav button.active span{position:relative;z-index:1}
+
+  /* bottom sheet */
+  .scrim{position:absolute;inset:0;background:rgba(0,0,0,.6);opacity:0;pointer-events:none;
+    transition:opacity .25s;z-index:20}
+  .scrim.show{opacity:1;pointer-events:auto}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:var(--container);
+    border-radius:28px 28px 0 0;padding:20px 16px 26px;transform:translateY(102%);
+    transition:transform .3s cubic-bezier(.2,.8,.2,1);z-index:21;max-height:78%;display:flex;flex-direction:column}
+  .sheet.show{transform:translateY(0)}
+  .sheet h3{font-size:16px;color:var(--primary);font-weight:500}
+  .chips{display:flex;gap:8px;margin:14px 0}
+  .chip{padding:7px 15px;border-radius:9px;border:1px solid var(--outline);background:transparent;
+    color:var(--on-surface-variant);font-size:12.5px;cursor:pointer;font-family:inherit}
+  .chip.on{background:var(--primary-container);color:var(--on-primary-container);border-color:var(--primary-container)}
+  .fmts{overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:8px;margin-bottom:14px;scrollbar-width:none}
+  .fmts::-webkit-scrollbar{display:none}
+  .fmt{background:var(--container-low);border-radius:14px;padding:12px 14px;cursor:pointer;
+    display:flex;align-items:center;gap:10px;transition:.15s}
+  .fmt:hover{background:var(--container-high)}
+  .fmt.sel{background:var(--container-highest)}
+  .fmt .t{font-size:14.5px;color:var(--on-surface)}
+  .fmt.sel .t{color:var(--primary)}
+  .fmt .s{font-size:11px;color:var(--on-surface-variant);margin-top:2px}
+  .fmt .size{font-size:11px;color:var(--on-surface-variant)}
+  .grabber{width:34px;height:4px;border-radius:2px;background:var(--outline);margin:0 auto 14px}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;
+    color:var(--on-surface-variant);line-height:1.6}
+</style>
+</head>
+<body>
+
+<div class="side">
+  <h1>Teal<span>Video &amp; audio downloader for Android</span></h1>
+  <p>This is an interactive preview of the app's UI, rendered with the exact palette
+     and metrics from <code>ui/theme/Color.kt</code>. The real app is native
+     Kotlin + Jetpack Compose; the APK is built by GitHub Actions from this repo.</p>
+  <ul>
+    <li>Type or paste a link, press <strong>Fetch</strong></li>
+    <li>Open <strong>Choose format</strong> for the quality sheet</li>
+    <li><strong>Download</strong> queues a task with live progress</li>
+    <li>Switch tabs below the screen; toggles in Settings work</li>
+  </ul>
+  <p style="margin-top:16px">yt-dlp does the fetching, bundled ffmpeg does the
+     muxing and post-processing, aria2c is available for multi-connection
+     transfers. GPL-3.0.</p>
+  <div class="badge">debug build · arm64-v8a · armeabi-v7a · x86_64</div>
+</div>
+
+<div class="phone">
+  <div class="statusbar">
+    <span>9:41</span>
+    <span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M2 22h20V2L2 22z"/></svg></span>
+  </div>
+
+  <div class="screen active" id="s-home">
+    <header class="appbar"><div class="row"><div><h2>Teal</h2><p>Video and audio downloader</p></div></div></header>
+
+    <div class="field" id="urlField">
+      <input id="url" type="text" placeholder=" " spellcheck="false" autocomplete="off">
+      <label for="url">Video URL</label>
+      <div class="trailing">
+        <button class="iconbtn" id="pasteBtn" title="Paste">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/></svg>
+        </button>
+        <button class="iconbtn muted" id="clearBtn" title="Clear" style="display:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="hint" id="urlError"></div>
+
+    <div class="btnrow">
+      <button class="btn secondary" id="fetchBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <span id="fetchLabel">Fetch</span></button>
+      <button class="btn primary" id="dlBtn" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 19h14"/></svg>
+        Download</button>
+    </div>
+
+    <div id="fetching" class="card" style="display:none">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div class="progress indet" style="width:20px;height:20px;border-radius:50%;flex:none;margin:0">
+          <i style="width:100%;border-radius:50%;background:conic-gradient(var(--primary) 25%,transparent 0);animation:spin .8s linear infinite"></i>
+        </div>
+        <span class="detail" style="margin:0">Reading the link…</span>
+      </div>
+    </div>
+    <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+    <div id="infoCard" class="card" style="display:none">
+      <div class="info">
+        <div class="thumb"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>
+        <div class="meta">
+          <h3 id="infoTitle">—</h3>
+          <div class="sub" id="infoSub">—</div>
+        </div>
+      </div>
+      <div class="tags" id="infoTags"></div>
+      <div id="selectedFmt" class="detail" style="display:none;color:var(--primary)"></div>
+    </div>
+
+    <div class="btnrow" id="infoActions" style="display:none">
+      <button class="btn secondary" id="chooseBtn">Choose format</button>
+      <button class="btn primary" id="dlBtn2">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 19h14"/></svg>
+        Download</button>
+    </div>
+
+    <div class="empty" id="homeEmpty">
+      <div class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></div>
+      <h3>Nothing loaded</h3>
+      <p>Paste a link above, or share one to Teal from another app. Fetching first shows the available qualities before you commit.</p>
+    </div>
+  </div>
+
+  <div class="screen" id="s-queue">
+    <header class="appbar"><div class="row"><div><h2>Downloads</h2></div>
+      <div class="actions"><button class="textbtn danger" id="cancelAll" style="display:none">Cancel all</button>
+      <button class="textbtn" id="clearFinished" style="display:none">Clear</button></div></div></header>
+    <div id="queueList"></div>
+    <div class="empty" id="queueEmpty">
+      <div class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 6 9 17l-5-5"/></svg></div>
+      <h3>No downloads yet</h3>
+      <p>Anything you start from the Download tab shows up here with live progress, and keeps running when you leave the app.</p>
+    </div>
+  </div>
+
+  <div class="screen" id="s-history">
+    <header class="appbar"><div class="row"><div><h2>History</h2></div>
+      <div class="actions"><button class="textbtn danger" id="clearHistory" style="display:none">Clear</button></div></div></header>
+    <div id="historyList"></div>
+    <div class="empty" id="historyEmpty">
+      <div class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg></div>
+      <h3>Nothing downloaded yet</h3>
+      <p>Finished downloads are listed here so you can reopen, share or fetch them again.</p>
+    </div>
+  </div>
+
+  <div class="screen" id="s-templates">
+    <header class="appbar"><div class="row"><div><h2>Command templates</h2></div></div></header>
+    <div class="card"><div class="row-click" style="padding-top:0">
+      <div class="left"><div class="t">Audio at 320k</div><div class="mono" style="margin-top:5px">-x --audio-format mp3 --audio-quality 0 --embed-thumbnail</div></div>
+      <button class="iconbtn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+      <button class="iconbtn muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+      <button class="iconbtn muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button>
+    </div></div>
+    <div class="card"><div class="row-click" style="padding-top:0">
+      <div class="left"><div class="t">1080p, no playlist</div><div class="mono" style="margin-top:5px">-f "bv*[height&lt;=?1080]+ba" --merge-output-format mp4 --no-playlist</div></div>
+      <button class="iconbtn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+      <button class="iconbtn muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+      <button class="iconbtn muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button>
+    </div></div>
+    <p class="detail">Arguments are appended last, so a template can override anything the UI generated. The URL is added for you.</p>
+  </div>
+
+  <div class="screen" id="s-settings">
+    <header class="appbar"><div class="row"><div><h2>Settings</h2></div></div></header>
+    <div id="settingsBody"></div>
+  </div>
+
+  <div class="scrim" id="scrim"></div>
+  <div class="sheet" id="sheet">
+    <div class="grabber"></div>
+    <h3 id="sheetTitle">Video qualities</h3>
+    <div class="chips">
+      <button class="chip on" id="chipVideo">Video</button>
+      <button class="chip" id="chipAudio">Audio only</button>
+    </div>
+    <div class="fmts" id="fmtList"></div>
+    <button class="btn primary" id="sheetDownload">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 19h14"/></svg>
+      <span id="sheetDownloadLabel">Start download</span></button>
+  </div>
+
+  <nav class="nav">
+    <button class="active" data-screen="s-home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 19h14"/></svg><span>Download</span></button>
+    <button data-screen="s-queue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="m10 9 5 2.5-5 2.5z" fill="currentColor" stroke="none"/></svg><span>Queue</span></button>
+    <button data-screen="s-history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg><span>History</span></button>
+    <button data-screen="s-templates"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 8 4 4-4 4M12 16h7"/></svg><span>Commands</span></button>
+    <button data-screen="s-settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2 2 2 0 1 1-4 0 1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 15a2 2 0 1 1 0-4 1.7 1.7 0 0 0 1.4-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 3a2 2 0 1 1 4 0 1.7 1.7 0 0 0 2.9 1.4l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 21 11a2 2 0 1 1 0 4z"/></svg><span>Settings</span></button>
+  </nav>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+
+/* ---- sample metadata shaped like yt-dlp's -J output ---- */
+const VIDEO_FORMATS = [
+  {id:'248+251', label:'1080p',   sub:'vp9 + opus · 1920x1080', size:'184 MB'},
+  {id:'137+140', label:'1080p',   sub:'avc1 + mp4a · 1920x1080', size:'212 MB'},
+  {id:'136+140', label:'720p',    sub:'avc1 + mp4a · 1280x720',  size:'118 MB'},
+  {id:'135+140', label:'480p',    sub:'avc1 + mp4a · 854x480',   size:'72 MB'},
+  {id:'134+140', label:'360p',    sub:'avc1 + mp4a · 640x360',   size:'41 MB'},
+  {id:'18',      label:'360p',    sub:'avc1 + mp4a · progressive', size:'38 MB'},
+];
+const AUDIO_FORMATS = [
+  {id:'251', label:'opus 130k',  sub:'opus · 48 kHz',        size:'11 MB'},
+  {id:'140', label:'m4a 128k',   sub:'mp4a · 44.1 kHz',      size:'11 MB'},
+  {id:'250', label:'opus 70k',   sub:'opus · 48 kHz',        size:'6 MB'},
+];
+const SAMPLE = {
+  title:'Big Buck Bunny — 4K remaster, full short film',
+  sub:'Blender Foundation  ·  9:56  ·  YouTube',
+  tags:['2160p','1440p','1080p','720p','audio'],
+};
+
+let selectedVideo = null, selectedAudio = null, audioTab = false, info = null;
+const tasks = [], history = [];
+
+/* ---- tabs ---- */
+$$('.nav button').forEach(b => b.addEventListener('click', () => {
+  $$('.nav button').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  $$('.screen').forEach(s => s.classList.remove('active'));
+  $('#' + b.dataset.screen).classList.add('active');
+}));
+
+/* ---- URL field ---- */
+const urlInput = $('#url');
+const syncField = () => {
+  $('#urlField').classList.toggle('filled', urlInput.value.length > 0);
+  $('#clearBtn').style.display = urlInput.value ? 'flex' : 'none';
+  $('#dlBtn').disabled = !urlInput.value.trim();
+};
+urlInput.addEventListener('input', syncField);
+urlInput.addEventListener('focus', () => $('#urlField').classList.add('filled'));
+$('#clearBtn').addEventListener('click', () => {
+  urlInput.value = ''; reset(); syncField();
+});
+$('#pasteBtn').addEventListener('click', async () => {
+  let text = '';
+  try { text = await navigator.clipboard.readText(); } catch(e) { text = ''; }
+  const found = (text.match(/https?:\/\/\S+/) || [])[0];
+  urlInput.value = found || text.trim() || 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+  $('#urlError').textContent = '';
+  reset(); syncField();
+});
+
+function reset(){
+  info = null; selectedVideo = null; selectedAudio = null;
+  $('#infoCard').style.display = 'none';
+  $('#infoActions').style.display = 'none';
+  $('#homeEmpty').style.display = 'flex';
+}
+
+/* ---- fetch ---- */
+function looksLikeUrl(v){
+  const m = /^(https?):\/\/(.+)$/.exec(v.trim());
+  return !!m && m[2].includes('.');
+}
+$('#fetchBtn').addEventListener('click', fetchInfo);
+function fetchInfo(){
+  const value = urlInput.value.trim();
+  if(!value){ $('#urlError').textContent = 'Enter a link first'; return; }
+  if(!looksLikeUrl(value)){ $('#urlError').textContent = 'That does not look like a link'; return; }
+  $('#urlError').textContent = '';
+  $('#fetching').style.display = 'block';
+  $('#fetchLabel').textContent = 'Fetching…';
+  $('#fetchBtn').disabled = true;
+  $('#homeEmpty').style.display = 'none';
+  setTimeout(() => {
+    $('#fetching').style.display = 'none';
+    $('#fetchLabel').textContent = 'Fetch';
+    $('#fetchBtn').disabled = false;
+    info = SAMPLE;
+    $('#infoTitle').textContent = info.title;
+    $('#infoSub').textContent = info.sub;
+    $('#infoTags').innerHTML = info.tags.map(t => `<span class="tag">${t}</span>`).join('');
+    $('#infoCard').style.display = 'block';
+    $('#infoActions').style.display = 'flex';
+  }, 1100);
+}
+
+/* ---- format sheet ---- */
+function openSheet(){ renderFormats(); $('#sheet').classList.add('show'); $('#scrim').classList.add('show'); }
+function closeSheet(){ $('#sheet').classList.remove('show'); $('#scrim').classList.remove('show'); }
+$('#chooseBtn').addEventListener('click', openSheet);
+$('#scrim').addEventListener('click', closeSheet);
+$('#chipVideo').addEventListener('click', () => { audioTab = false; renderFormats(); });
+$('#chipAudio').addEventListener('click', () => { audioTab = true; renderFormats(); });
+function renderFormats(){
+  $('#chipVideo').classList.toggle('on', !audioTab);
+  $('#chipAudio').classList.toggle('on', audioTab);
+  $('#sheetTitle').textContent = audioTab ? 'Audio tracks' : 'Video qualities';
+  $('#sheetDownloadLabel').textContent = audioTab ? 'Download audio' : 'Start download';
+  const list = audioTab ? AUDIO_FORMATS : VIDEO_FORMATS;
+  const sel = audioTab ? selectedAudio : selectedVideo;
+  $('#fmtList').innerHTML =
+    fmtRow('Best available', audioTab ? 'Highest quality audio stream' : 'Let yt-dlp pick and merge the best', '', sel === null) +
+    list.map(f => fmtRow(f.label, f.sub, f.size, sel === f.id, f.id)).join('');
+  $$('#fmtList .fmt').forEach(el => el.addEventListener('click', () => {
+    const id = el.dataset.id === 'best' ? null : el.dataset.id;
+    if(audioTab) selectedAudio = id; else { selectedVideo = id; selectedAudio = null; }
+    renderFormats(); updateSelectedLabel();
+  }));
+}
+function fmtRow(t, s, size, selected, id){
+  return `<div class="fmt${selected?' sel':''}" data-id="${id ?? 'best'}">
+    <div class="left"><div class="t">${t}</div><div class="s">${s}</div></div>
+    ${size ? `<span class="size">${size}</span>` : ''}
+    ${selected ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.2"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 19h14"/></svg>' : ''}
+  </div>`;
+}
+function updateSelectedLabel(){
+  const chosen = selectedVideo || selectedAudio;
+  const el = $('#selectedFmt');
+  if(chosen){ el.style.display = 'block'; el.textContent = 'Selected format: ' + chosen; }
+  else el.style.display = 'none';
+}
+$('#sheetDownload').addEventListener('click', () => { closeSheet(); startDownload(audioTab); });
+
+/* ---- download + queue ---- */
+$('#dlBtn').addEventListener('click', () => startDownload(false));
+$('#dlBtn2').addEventListener('click', () => startDownload(false));
+
+function startDownload(audioOnly){
+  const url = urlInput.value.trim() || 'https://example.com/video';
+  const task = {
+    id: Math.random().toString(36).slice(2,9),
+    title: info ? info.title : url,
+    status: 'queued', progress: 0, speed: 0, eta: null, audioOnly,
+    total: audioOnly ? 11 : (selectedVideo === '18' ? 38 : 212),
+    error: null, ext: audioOnly ? 'mp3' : 'mp4',
+  };
+  tasks.unshift(task);
+  renderQueue(); switchTab('s-queue');
+  urlInput.value = ''; reset(); syncField();
+  runTask(task);
+}
+function runTask(task){
+  task.status = 'running'; renderQueue();
+  const timer = setInterval(() => {
+    const step = Math.random() * 7 + 2.5;
+    task.progress = Math.min(100, task.progress + step);
+    task.speed = 1.2 + Math.random() * 3.4;
+    task.eta = Math.max(0, Math.round((100 - task.progress) / step * 0.45));
+    if(task.progress >= 100){
+      clearInterval(timer);
+      task.status = 'processing'; renderQueue();
+      setTimeout(() => {
+        task.status = 'done'; task.speed = 0; task.eta = null;
+        history.unshift({...task, when: new Date(), location: 'Saved to Downloads'});
+        renderQueue(); renderHistory();
+      }, 1500);
+    }
+    renderQueue();
+  }, 450);
+  task.timer = timer;
+}
+const fmtBytes = mb => mb >= 1024 ? (mb/1024).toFixed(2)+' GB' : mb.toFixed(0)+' MB';
+const fmtEta = s => s == null ? '—' : s < 60 ? s+'s' : Math.floor(s/60)+'m '+(s%60)+'s';
+
+function renderQueue(){
+  const list = $('#queueList');
+  $('#queueEmpty').style.display = tasks.length ? 'none' : 'flex';
+  $('#cancelAll').style.display = tasks.some(t => ['queued','running','processing'].includes(t.status)) ? 'block' : 'none';
+  $('#clearFinished').style.display = tasks.some(t => !['queued','running','processing'].includes(t.status)) ? 'block' : 'none';
+  list.innerHTML = tasks.map(t => {
+    const active = ['queued','running','processing'].includes(t.status);
+    const label = {queued:'queued',running:'downloading',processing:'processing',done:'done',failed:'failed',canceled:'canceled'}[t.status];
+    let detail;
+    if(t.status === 'queued') detail = 'Waiting for a free slot';
+    else if(t.status === 'running') detail = `${t.progress.toFixed(0)}%  ·  ${t.speed.toFixed(2)} MB/s  ·  ${fmtEta(t.eta)} left  ·  of ${fmtBytes(t.total)}`;
+    else if(t.status === 'processing') detail = 'Muxing and post-processing with ffmpeg';
+    else if(t.status === 'done') detail = `${fmtBytes(t.total)}  ·  Saved to Downloads`;
+    else if(t.status === 'failed') detail = t.error || 'Download failed';
+    else detail = 'Canceled';
+    return `<div class="card">
+      <div class="info">
+        <div class="thumb" style="width:104px;height:59px"><svg viewBox="0 0 24 24" fill="currentColor" style="width:22px;height:22px"><path d="M8 5v14l11-7z"/></svg></div>
+        <div class="meta"><h3 style="font-size:15px">${t.title}</h3>
+          <div class="tags" style="margin-top:6px"><span class="tag${t.status==='failed'?' err':''}">${label}</span>
+          <span class="tag muted">${t.ext}</span>${t.audioOnly?'<span class="tag muted">audio</span>':''}</div></div>
+      </div>
+      ${t.status==='failed'||t.status==='canceled' ? '' : `<div class="progress${t.progress<=0&&t.status!=='done'?' indet':''}"><i style="width:${t.status==='done'?100:t.progress}%"></i></div>`}
+      <div class="detail${t.status==='failed'?' err':''}">${detail}</div>
+      <div class="actions-end">
+        ${active ? `<button class="iconbtn" data-act="cancel" data-id="${t.id}" title="Cancel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--error)" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>` : ''}
+        ${t.status==='done' ? `
+          <button class="iconbtn" title="Share"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 3v13m0-13 4 4m-4-4-4 4"/></svg></button>
+          <button class="iconbtn" title="Open"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></button>
+          <button class="iconbtn muted" data-act="remove" data-id="${t.id}" title="Dismiss"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>` : ''}
+        ${t.status==='failed'||t.status==='canceled' ? `
+          <button class="iconbtn" data-act="retry" data-id="${t.id}" title="Retry"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>
+          <button class="iconbtn muted" data-act="remove" data-id="${t.id}" title="Dismiss"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>` : ''}
+      </div></div>`;
+  }).join('');
+  list.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => {
+    const t = tasks.find(x => x.id === b.dataset.id); if(!t) return;
+    if(b.dataset.act === 'cancel'){ clearInterval(t.timer); t.status = 'canceled'; }
+    if(b.dataset.act === 'remove'){ tasks.splice(tasks.indexOf(t),1); }
+    if(b.dataset.act === 'retry'){ t.status='queued'; t.progress=0; t.error=null; runTask(t); }
+    renderQueue();
+  }));
+}
+$('#cancelAll').addEventListener('click', () => {
+  tasks.forEach(t => { if(['queued','running','processing'].includes(t.status)){ clearInterval(t.timer); t.status='canceled'; } });
+  renderQueue();
+});
+$('#clearFinished').addEventListener('click', () => {
+  for(let i=tasks.length-1;i>=0;i--) if(!['queued','running','processing'].includes(tasks[i].status)) tasks.splice(i,1);
+  renderQueue();
+});
+
+/* ---- history ---- */
+function renderHistory(){
+  $('#historyEmpty').style.display = history.length ? 'none' : 'flex';
+  $('#clearHistory').style.display = history.length ? 'block' : 'none';
+  $('#historyList').innerHTML = history.map((h,i) => `<div class="card">
+    <div class="info">
+      <div class="thumb" style="width:96px;height:54px"><svg viewBox="0 0 24 24" fill="currentColor" style="width:20px;height:20px"><path d="M8 5v14l11-7z"/></svg></div>
+      <div class="meta"><h3 style="font-size:15px">${h.title}</h3>
+        <div class="sub" style="margin-top:5px">${h.when.toLocaleString()}</div>
+        <div class="tags" style="margin-top:7px"><span class="tag">saved</span>
+          <span class="tag muted">${h.ext}</span><span class="tag muted">${fmtBytes(h.total)}</span>
+          ${h.audioOnly?'<span class="tag muted">audio</span>':''}</div></div>
+    </div>
+    <div class="actions-end">
+      <button class="iconbtn" title="Download again"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 19h14"/></svg></button>
+      <button class="iconbtn" title="Share"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 3v13m0-13 4 4m-4-4-4 4"/></svg></button>
+      <button class="iconbtn" title="Open"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></button>
+      <button class="iconbtn muted" data-h="${i}" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button>
+    </div></div>`).join('');
+  $$('#historyList [data-h]').forEach(b => b.addEventListener('click', () => {
+    history.splice(+b.dataset.h,1); renderHistory();
+  }));
+}
+$('#clearHistory').addEventListener('click', () => { history.length = 0; renderHistory(); });
+
+/* ---- settings ---- */
+const SETTINGS = [
+  ['DOWNLOAD', [
+    {t:'toggle', title:'Download audio only', sub:'Extract the audio track and convert it', on:false},
+    {t:'value', title:'Audio format', value:'MP3'},
+    {t:'value', title:'Video format preference', sub:'Maximum compatibility (H.264/AAC mp4)'},
+    {t:'value', title:'Maximum resolution', sub:'Caps the height; falls back if unavailable', value:'Best'},
+  ]],
+  ['POST-PROCESSING', [
+    {t:'toggle', title:'Embed metadata', sub:'Title, uploader and date inside the file', on:true},
+    {t:'toggle', title:'Embed thumbnail', sub:'Needs ffmpeg; adds cover art', on:false},
+    {t:'toggle', title:'Save subtitles', sub:'Downloads subtitle tracks as separate files', on:false},
+    {t:'toggle', title:'Embed subtitles', sub:'Muxes them into the video (mp4/mkv only)', on:false},
+    {t:'value', title:'Subtitle languages', sub:'Comma separated, or "all"', value:'en'},
+    {t:'toggle', title:'Remove sponsor segments', sub:'SponsorBlock: cuts out intros, sponsors and reminders', on:false},
+  ]],
+  ['TRANSFER', [
+    {t:'toggle', title:'Use aria2c', sub:'Multi-connection external downloader', on:false},
+    {t:'value', title:'aria2c connections', value:'8'},
+    {t:'value', title:'Concurrent fragments', sub:'Parallel chunks for HLS/DASH streams', value:'4'},
+    {t:'value', title:'Retries', value:'3'},
+    {t:'value', title:'Simultaneous downloads', sub:'How many downloads run at once', value:'2'},
+    {t:'value', title:'Speed limit', sub:'Empty means unlimited', value:'—'},
+  ]],
+  ['STORAGE', [
+    {t:'toggle', title:'Save to public Downloads', sub:'Copies finished files into Downloads/Teal so other apps can see them. Off keeps them in app-private storage only.', on:true},
+    {t:'value', title:'Filename template', sub:'yt-dlp output template', value:'%(title)s.%(ext)s'},
+  ]],
+  ['PLAYLISTS', [
+    {t:'toggle', title:'Ignore playlists', sub:'Only take the single video from a playlist URL', on:true},
+    {t:'value', title:'Playlist items', sub:'Overrides the above, e.g. 1-5,8', value:'—'},
+  ]],
+  ['ADVANCED', [
+    {t:'toggle', title:'Restrict filenames', sub:'ASCII only, no spaces', on:false},
+    {t:'value', title:'Proxy', value:'—'},
+    {t:'value', title:'User agent', value:'—'},
+    {t:'value', title:'Cookies file', sub:'For sites that need an account', value:'—'},
+    {t:'value', title:'Extra arguments', sub:'Appended last, so they override everything', value:'—'},
+  ]],
+];
+$('#settingsBody').innerHTML = SETTINGS.map(([group, rows]) => `
+  <div class="section">${group}</div>
+  <div class="card">${rows.map((r,i) => r.t === 'toggle'
+    ? `<div class="row-click" style="${i?'':''}"><div class="left"><div class="t">${r.title}</div>${r.sub?`<div class="s">${r.sub}</div>`:''}</div>
+       <div class="switch${r.on?' on':''}" data-k="${group}-${i}"><i></i></div></div>`
+    : `<div class="row-click"><div class="left"><div class="t">${r.title}</div>${r.sub?`<div class="s">${r.sub}</div>`:''}</div>
+       ${r.value?`<span class="v">${r.value}</span>`:''}</div>`
+  ).join('<div class="divider"></div>')}</div>`).join('') + `
+  <div class="section">ABOUT</div>
+  <div class="card">
+    <div class="row-click"><div class="left"><div class="t">Teal</div></div><span class="v">0.1.0</span></div>
+    <div class="divider"></div>
+    <div class="row-click"><div class="left"><div class="t">yt-dlp</div></div><span class="v">unpacked on first download</span></div>
+    <div class="divider"></div>
+    <p class="detail" style="margin-top:12px">Teal is free software under the GNU GPL-3.0, because the yt-dlp,
+      ffmpeg and aria2c libraries it embeds are GPL-licensed. It is an independent implementation and is not
+      affiliated with yt-dlp or Seal.</p>
+  </div>`;
+$$('#settingsBody .switch').forEach(sw => sw.addEventListener('click', e => {
+  e.stopPropagation(); sw.classList.toggle('on');
+}));
+
+function switchTab(id){
+  $$('.nav button').forEach(b => {
+    const active = b.dataset.screen === id;
+    b.classList.toggle('active', active);
+    if(active) b.click();
+  });
+}
+syncField();
+</script>
+</body>
+</html>

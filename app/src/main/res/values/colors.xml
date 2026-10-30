@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark surfaces with a teal cast. These are the window-level colours; the
+         in-app palette lives in ui/theme/Color.kt and must stay in sync. -->
+    <color name="teal_background">#FF08110F</color>
+    <color name="teal_primary">#FF2DD4BF</color>
+    <color name="ic_launcher_background">#FF08110F</color>
+</resources>

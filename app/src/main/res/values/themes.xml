@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Compose draws the whole UI, so this only styles the window the
+         composables sit in: dark background, transparent system bars so the
+         app can draw edge to edge. No AppCompat/Material dependency needed. -->
+    <style name="Theme.Teal" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/teal_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:colorBackground">@color/teal_background</item>
+        <item name="android:colorAccent">@color/teal_primary</item>
+    </style>
+</resources>

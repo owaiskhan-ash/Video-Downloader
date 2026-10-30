@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Teal</string>
+    <string name="app_tagline">Video and audio downloader</string>
+
+    <!-- Home -->
+    <string name="home_url_label">Video URL</string>
+    <string name="home_url_placeholder">Paste a link to a video</string>
+    <string name="home_paste">Paste</string>
+    <string name="home_clear">Clear</string>
+    <string name="home_fetch">Fetch</string>
+    <string name="home_download">Download</string>
+    <string name="home_download_audio">Download audio</string>
+    <string name="home_empty_title">Nothing queued</string>
+    <string name="home_empty_body">Paste a link above, or share one to Teal from another app.</string>
+
+    <!-- Format picker -->
+    <string name="format_title">Choose a format</string>
+    <string name="format_video">Video</string>
+    <string name="format_audio_only">Audio only</string>
+    <string name="format_best">Best available</string>
+    <string name="format_size_unknown">Size unknown</string>
+    <string name="format_start_download">Start download</string>
+
+    <!-- Queue -->
+    <string name="queue_title">Downloads</string>
+    <string name="queue_empty">No active downloads</string>
+    <string name="queue_cancel">Cancel</string>
+    <string name="queue_retry">Retry</string>
+    <string name="queue_open">Open</string>
+
+    <!-- History -->
+    <string name="history_title">History</string>
+    <string name="history_empty">Nothing downloaded yet</string>
+    <string name="history_delete">Delete</string>
+    <string name="history_redownload">Download again</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_group_download">Download</string>
+    <string name="settings_group_format">Format</string>
+    <string name="settings_group_advanced">Advanced</string>
+    <string name="settings_group_about">About</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_downloads">Downloads</string>
+    <string name="notification_channel_downloads_desc">Progress for running downloads</string>
+    <string name="notification_downloading">Downloading</string>
+    <string name="notification_cancel">Cancel</string>
+    <string name="notification_complete">Download complete</string>
+    <string name="notification_failed">Download failed</string>
+    <string name="notification_channel_results">Results</string>
+    <string name="notification_channel_results_desc">Finished and failed downloads</string>
+    <string name="notification_downloading_count">Downloading %1$d files</string>
+    <string name="notification_multi_body">%1$s · %2$s left</string>
+    <string name="notification_cancel_all">Cancel all</string>
+
+    <!-- Errors -->
+    <string name="error_empty_url">Enter a link first</string>
+    <string name="error_invalid_url">That does not look like a supported link</string>
+    <string name="error_unsupported_site">yt-dlp could not handle this site</string>
+    <string name="error_network">Network problem — check the connection and retry</string>
+    <string name="error_fetch_failed">Could not read that link</string>
+</resources>
