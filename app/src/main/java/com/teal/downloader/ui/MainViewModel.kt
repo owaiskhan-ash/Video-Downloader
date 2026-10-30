@@ -46,6 +46,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _ytDlpVersion = MutableStateFlow<String?>(null)
     val ytDlpVersion: StateFlow<String?> = _ytDlpVersion.asStateFlow()
 
+    /** Result of the last yt-dlp update attempt, shown under the version row. */
+    private val _ytDlpUpdateState = MutableStateFlow<String?>(null)
+    val ytDlpUpdateState: StateFlow<String?> = _ytDlpUpdateState.asStateFlow()
+
+    private val _ytDlpUpdating = MutableStateFlow(false)
+    val ytDlpUpdating: StateFlow<Boolean> = _ytDlpUpdating.asStateFlow()
+
     val tasks: StateFlow<List<DownloadTask>> = DownloadManager.tasks
 
     val settings: StateFlow<DownloadSettings> = settingsRepository.settings
@@ -192,6 +199,27 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setMaxConcurrentDownloads(value: Int) =
         viewModelScope.launch { settingsRepository.setMaxConcurrentDownloads(value) }
+
+    /**
+     * Fetches the newest stable yt-dlp.
+     *
+     * Worth having because the bundled copy is frozen at build time and YouTube
+     * breaks older extractors often; without it the only fix is a new APK.
+     */
+    fun updateYtDlp() = viewModelScope.launch {
+        if (_ytDlpUpdating.value) return@launch
+        _ytDlpUpdating.value = true
+        _ytDlpUpdateState.value = try {
+            DownloadManager.updateYtDlp()
+        } catch (e: Exception) {
+            // Surfaced inline: a failed update is not fatal, and a dialog would
+            // be more intrusive than the row the action belongs to.
+            e.message ?: "Could not update yt-dlp"
+        } finally {
+            _ytDlpUpdating.value = false
+        }
+        _ytDlpVersion.value = DownloadManager.ytDlpVersion()
+    }
 
     // -- command templates --------------------------------------------------
 

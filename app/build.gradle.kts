@@ -14,8 +14,8 @@ android {
         applicationId = "com.teal.downloader"
         minSdk = 24
         targetSdk = 35
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = 3
+        versionName = "0.2.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Ship every language we actually translate rather than all of AOSP's.
@@ -83,7 +83,14 @@ android {
                 "lib/**/libytdlp*.so",
                 "lib/**/libffmpeg*.so",
             )
-            useLegacyPackaging = false
+            // MUST stay true. youtubedl-android does not merely load these
+            // libraries, it *reads them as files*: YoutubeDL.init() resolves
+            // applicationInfo.nativeLibraryDir and unzips libpython.zip.so from
+            // there to build the Python runtime. With legacy packaging off the
+            // .so files stay inside the APK and are never extracted, that path
+            // does not exist, and every download dies with the library's
+            // "failed to initialize". Costs install size; there is no alternative.
+            useLegacyPackaging = true
         }
     }
 

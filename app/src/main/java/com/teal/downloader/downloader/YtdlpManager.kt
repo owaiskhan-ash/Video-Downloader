@@ -46,15 +46,61 @@ class YtdlpManager(private val context: Context) {
         initMutex.withLock {
             if (initialised) return
             withContext(Dispatchers.IO) {
-                YoutubeDL.init(context)
-                FFmpeg.init(context)
-                Aria2c.init(context)
+                try {
+                    YoutubeDL.init(context)
+                    FFmpeg.init(context)
+                    Aria2c.init(context)
+                } catch (e: Throwable) {
+                    // The library reports every unpacking failure as a bare
+                    // "failed to initialize" with the real reason buried in the
+                    // cause chain, which tells the user nothing. Unwrap it, and
+                    // say so plainly when the cause is the one that actually
+                    // bites: the Python runtime never being extracted.
+                    throw DownloadException(describeInitFailure(e))
+                }
             }
             initialised = true
         }
     }
 
+    private fun describeInitFailure(error: Throwable): String {
+        val root = generateSequence(error) { it.cause }.take(6).last()
+        val detail = root.message?.takeIf { it.isNotBlank() } ?: root.javaClass.simpleName
+        val runtime = File(context.applicationInfo.nativeLibraryDir, "libpython.zip.so")
+        return if (runtime.exists()) {
+            "Could not start the download engine: $detail"
+        } else {
+            "Could not start the download engine ($detail). The bundled Python runtime was " +
+                "not extracted into this install — reinstalling usually fixes it."
+        }
+    }
+
     fun ytDlpVersion(): String? = runCatching { YoutubeDL.version(context) }.getOrNull()
+
+    /**
+     * Replaces the bundled yt-dlp with the newest stable release.
+     *
+     * The copy inside the APK is frozen at build time, and YouTube changes its
+     * player often enough that a months-old yt-dlp stops being able to extract
+     * from it. This is the way back to a working download without waiting on a
+     * new app release.
+     */
+    suspend fun updateYtDlp(): String = withContext(Dispatchers.IO) {
+        ensureInitialised()
+        val status = runCatching {
+            YoutubeDL.updateYoutubeDL(context, YoutubeDL.UpdateChannel.STABLE)
+        }.getOrElse {
+            throw DownloadException(
+                "Could not update yt-dlp: ${it.message ?: it.javaClass.simpleName}"
+            )
+        }
+        val version = ytDlpVersion() ?: "the latest version"
+        when (status) {
+            YoutubeDL.UpdateStatus.DONE -> "Updated yt-dlp to $version"
+            YoutubeDL.UpdateStatus.ALREADY_UP_TO_DATE -> "Already up to date ($version)"
+            null -> "Could not check for updates"
+        }
+    }
 
     /** Reads metadata for [url] without downloading anything. */
     suspend fun fetchInfo(
@@ -151,8 +197,24 @@ class DownloadException(message: String) : Exception(message) {
             val lower = text.lowercase()
             return when {
                 "unsupported url" in lower -> "This site or URL is not supported by yt-dlp"
+
+                // The commonest real-world failure. The bundled yt-dlp is frozen
+                // at build time while sites keep changing their players, so the
+                // symptom is an extraction error and the fix is the in-app
+                // updater. Naming the symptom alone would be a dead end.
+                "unable to extract" in lower || "nsig" in lower ||
+                    ("signature" in lower && "extract" in lower) ||
+                    "initial data" in lower || "please update" in lower ||
+                    "update yt-dlp" in lower ->
+                    "yt-dlp could not read that page. Try Update under Settings › About — " +
+                        "the bundled yt-dlp is older than this site's current layout."
+
                 "sign in" in lower || "login" in lower || "account" in lower ->
-                    "This video needs an account — add a cookies file in Settings"
+                    "This video needs an account. Add a cookies file in Settings, or try " +
+                        "updating yt-dlp first if the site is asking everyone to sign in."
+
+                "requested format is not available" in lower || "no video formats" in lower ->
+                    "That quality is not available for this video — pick a different one"
                 "private video" in lower -> "That video is private"
                 "members-only" in lower || "members only" in lower -> "That video is members-only"
                 "age" in lower && "restrict" in lower -> "That video is age-restricted"
