@@ -349,6 +349,32 @@ jobs:
                           'yt_dlp', 'index.html']:
                   hits = [n for n in members if key in n]
                   print(f'   {key:14} -> {len(hits):5d}', hits[:4])
+
+          # yt_dlp is NOT in private.tar - p4a packs the Python stdlib and
+          # site-packages into lib/<abi>/libpybundle.so, which is a zip renamed
+          # to .so so the APK does not compress it twice. Open it to prove the
+          # one dependency the whole app exists for actually shipped.
+          for abi in ['arm64-v8a', 'armeabi-v7a']:
+              lib = f'lib/{abi}/libpybundle.so'
+              try:
+                  blob = z.read(lib)
+              except KeyError:
+                  print(f'== no {lib} ==')
+                  continue
+              open('/tmp/bundle.bin', 'wb').write(blob)
+              print(f'== {lib}: {len(blob)} bytes ==')
+              try:
+                  bn = zipfile.ZipFile('/tmp/bundle.bin').namelist()
+              except zipfile.BadZipFile:
+                  print('   not a zip archive')
+                  break
+              print(f'   {len(bn)} members, '
+                    f'{sum(1 for n in bn if n.endswith(".pyc"))} .pyc')
+              for key in ['yt_dlp', 'engine/', 'devserver', 'main.pyc',
+                          'json/', 'ssl', 'sqlite3']:
+                  hits = [n for n in bn if key in n]
+                  print(f'   {key:14} -> {len(hits):5d}', hits[:3])
+              break
           PY
           # Append INSIDE apk-report.txt: this file is what gets pushed to
           # ci-logs, so anything only echoed to the console is unreadable.
