@@ -152,7 +152,7 @@ jobs:
           {
             echo "## Build report"
             echo
-            echo "Built from `${GITHUB_SHA:0:7}` on $(date -u +%Y-%m-%dT%H:%M:%SZ)."
+            echo "Built from \`${GITHUB_SHA:0:7}\` on $(date -u +%Y-%m-%dT%H:%M:%SZ)."
             echo
             echo "| ABI | File | Size | SHA256 |"
             echo "| --- | --- | --- | --- |"
@@ -187,9 +187,9 @@ jobs:
             fi
             echo '```'
             echo
-            echo "These are what make a download possible: `libpython.so` carries the yt-dlp"
-            echo "interpreter, `libffmpeg.so` and `libffprobe.so` do the muxing and"
-            echo "post-processing, and `libaria2c.so` is the optional external downloader."
+            echo 'These are what make a download possible: `libpython.so` carries the yt-dlp'
+            echo 'interpreter, `libffmpeg.so` and `libffprobe.so` do the muxing and'
+            echo 'post-processing, and `libaria2c.so` is the optional external downloader.'
             echo
             echo "### Unit tests"
             echo
