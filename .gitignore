@@ -1,0 +1,31 @@
+# Gradle / Android build output. Never commit these: they are large, machine
+# specific, and reproducible from source.
+.gradle/
+build/
+*/build/
+local.properties
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Kotlin
+.kotlin/
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# Keystores never belong in a repository.
+*.jks
+*.keystore
+
+# Room schemas are generated but intentionally reviewed, so they are kept:
+# see the room.schemaLocation KSP arg in app/build.gradle.kts.
