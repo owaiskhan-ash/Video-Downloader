@@ -133,11 +133,82 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
         run: |
+          set -x
           gh release view "$TAG" > /dev/null 2>&1 || \
             gh release create "$TAG" --title "$TAG" --generate-notes
           gh release upload "$TAG" release/*.apk release/SHA256SUMS.txt --clobber
           echo "Attached to release $TAG:"
           gh release view "$TAG" --json assets -q '.assets[].name'
+
+          # Inspection report, published into the release body.
+          #
+          # This is the only channel back out of CI: step logs live on a host a
+          # restricted sandbox cannot fetch, and neither can release assets, so
+          # "the APK built" is not the same as "the APK contains what it needs".
+          # Dumping the manifest and the payload inventory here makes the built
+          # artefact verifiable from the release page alone.
+          ARM64="$(ls release/*arm64-v8a*.apk 2>/dev/null | head -1)"
+          AAPT="$(ls "$ANDROID_HOME"/build-tools/*/aapt2 2>/dev/null | sort -V | tail -1)"
+          {
+            echo "## Build report"
+            echo
+            echo "Built from `${GITHUB_SHA:0:7}` on $(date -u +%Y-%m-%dT%H:%M:%SZ)."
+            echo
+            echo "| ABI | File | Size | SHA256 |"
+            echo "| --- | --- | --- | --- |"
+            for f in release/*.apk; do
+              n="$(basename "$f")"
+              # Match on the ABI names rather than on filename position, so a
+              # ref that itself contains hyphens cannot shift the fields.
+              abi="$(printf '%s' "$n" | grep -oE 'arm64-v8a|armeabi-v7a|x86_64|x86' | head -1 || true)"
+              abi="${abi:-unknown}"
+              sum="$(sha256sum "$f" | cut -c1-16)"
+              printf '| %s | `%s` | %s | `%s…` |\n' "$abi" "$n" "$(du -h "$f" | cut -f1)" "$sum"
+            done
+            echo
+            echo "### Manifest (arm64-v8a)"
+            echo
+            echo '```'
+            if [ -n "$ARM64" ] && [ -n "$AAPT" ]; then
+              "$AAPT" dump badging "$ARM64" 2>/dev/null | \
+                grep -E "^package|^application-label|^launchable-activity|^sdkVersion|^targetSdkVersion|^uses-permission|^native-code" || \
+                echo "(aapt2 produced nothing)"
+            else
+              echo "(aapt2 or the arm64 APK was not found)"
+            fi
+            echo '```'
+            echo
+            echo "### Bundled payloads (arm64-v8a)"
+            echo
+            echo '```'
+            if [ -n "$ARM64" ]; then
+              unzip -l "$ARM64" 2>/dev/null | \
+                awk '{print $4}' | grep -E '^lib/arm64-v8a/.+\.so$' | sort || echo "(no native libs listed)"
+            fi
+            echo '```'
+            echo
+            echo "These are what make a download possible: `libpython.so` carries the yt-dlp"
+            echo "interpreter, `libffmpeg.so` and `libffprobe.so` do the muxing and"
+            echo "post-processing, and `libaria2c.so` is the optional external downloader."
+            echo
+            echo "### Unit tests"
+            echo
+            echo '```'
+            find app/build/test-results -name '*.xml' -exec \
+              grep -ho 'tests="[0-9]*" skipped="[0-9]*" failures="[0-9]*" errors="[0-9]*"' {} \; 2>/dev/null || \
+              echo "(no test results)"
+            echo '```'
+          } > build-report.md
+
+          # Idempotent: drop any report from a previous run of this tag before
+          # appending the new one, so re-running does not stack duplicates.
+          gh release view "$TAG" --json body -q .body 2>/dev/null | \
+            awk '/^## Build report$/{exit} {print}' > notes-head.md
+          printf '\n' >> notes-head.md
+          cat notes-head.md build-report.md > notes-final.md
+          gh release edit "$TAG" --notes-file notes-final.md
+          echo "release body updated:"
+          gh release view "$TAG" --json body -q .body | head -20
 
       - name: Publish build logs on failure
         # The only way to see a failure from a sandbox that cannot reach the
