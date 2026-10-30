@@ -285,6 +285,18 @@ jobs:
             echo "== artefact collection =="
             cat collect.log 2>/dev/null || echo "(collect step did not run)"
             echo
+            echo "== compiler errors =="
+            # Grepped explicitly rather than left to the tail window below: a
+            # Kotlin failure prints a long stacktrace after the "e:" lines, which
+            # pushed them out of a fixed tail and left nothing to diagnose from.
+            grep -E "^e: " build-console.log 2>/dev/null | head -80 || echo "(none)"
+            echo
+            echo "== compiler warnings (sample) =="
+            grep -E "^w: " build-console.log 2>/dev/null | head -30 || echo "(none)"
+            echo
+            echo "== failure summary =="
+            grep -A 14 "^\* What went wrong:" build-console.log 2>/dev/null | head -40 || echo "(none)"
+            echo
             echo "== gradle console (tail 250) =="
             tail -n 250 build-console.log 2>/dev/null || echo "(no console log)"
             echo

@@ -36,7 +36,9 @@ class MainActivity : ComponentActivity() {
         // bar scrim is the app background, for the API levels that cannot make
         // the bar transparent.
         enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT.toArgb()),
+            // android.graphics.Color.TRANSPARENT is already an Int; toArgb() is a
+            // Compose extension on a different Color type and does not apply here.
+            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(
                 ContextCompat.getColor(this, R.color.teal_background),
             ),
