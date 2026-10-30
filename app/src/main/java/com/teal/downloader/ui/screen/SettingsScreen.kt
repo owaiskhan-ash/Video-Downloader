@@ -13,7 +13,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Terminal
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -74,6 +77,7 @@ fun SettingsScreen(viewModel: MainViewModel, onOpenTemplates: () -> Unit) {
     val ytDlpUpdateState by viewModel.ytDlpUpdateState.collectAsStateWithLifecycle()
     val ytDlpUpdating by viewModel.ytDlpUpdating.collectAsStateWithLifecycle()
     var dialog by remember { mutableStateOf<SettingsDialog?>(null) }
+    var advancedOpen by remember { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize()) {
         TopAppBar(
@@ -158,9 +162,40 @@ fun SettingsScreen(viewModel: MainViewModel, onOpenTemplates: () -> Unit) {
                             )
                         },
                     )
+                    Divider()
+                    ToggleRow(
+                        title = "Save to Downloads folder",
+                        subtitle = "So your files show up in other apps",
+                        checked = publishToDownloads,
+                        onCheckedChange = viewModel::setPublishToDownloads,
+                    )
                 }
             }
 
+            // Everything below is opt-in. Those rows cover what people actually
+            // change; the rest is kept for parity but moved out of the way, so
+            // the screen reads as a short list rather than a wall of toggles.
+            item {
+                SectionCard {
+                    ClickableRow(
+                        title = "Advanced settings",
+                        subtitle = if (advancedOpen) {
+                            "Tap to hide"
+                        } else {
+                            "Subtitles, playlists, network, storage, templates"
+                        },
+                        leadingIcon = Icons.Rounded.Tune,
+                        trailingIcon = if (advancedOpen) {
+                            Icons.Rounded.ExpandLess
+                        } else {
+                            Icons.Rounded.ExpandMore
+                        },
+                        onClick = { advancedOpen = !advancedOpen },
+                    )
+                }
+            }
+
+            if (advancedOpen) {
             item { SectionHeader("POST-PROCESSING") }
             item {
                 SectionCard {
@@ -295,17 +330,9 @@ fun SettingsScreen(viewModel: MainViewModel, onOpenTemplates: () -> Unit) {
                 }
             }
 
-            item { SectionHeader("STORAGE") }
+            item { SectionHeader("FILENAMES") }
             item {
                 SectionCard {
-                    ToggleRow(
-                        title = "Save to public Downloads",
-                        subtitle = "Copies finished files into Downloads/Teal so other apps can see them. " +
-                            "Off keeps them in app-private storage only.",
-                        checked = publishToDownloads,
-                        onCheckedChange = viewModel::setPublishToDownloads,
-                    )
-                    Divider()
                     ClickableRow(
                         title = "Filename template",
                         subtitle = "yt-dlp output template",
@@ -358,7 +385,7 @@ fun SettingsScreen(viewModel: MainViewModel, onOpenTemplates: () -> Unit) {
                 }
             }
 
-            item { SectionHeader("ADVANCED") }
+            item { SectionHeader("EXPERT") }
             item {
                 SectionCard {
                     ClickableRow(
@@ -391,6 +418,8 @@ fun SettingsScreen(viewModel: MainViewModel, onOpenTemplates: () -> Unit) {
                 }
             }
 
+            } // advancedOpen
+
             item { SectionHeader("ABOUT") }
             item {
                 SectionCard {
@@ -405,9 +434,9 @@ fun SettingsScreen(viewModel: MainViewModel, onOpenTemplates: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            "The bundled copy is frozen at build time. Updating fetches the " +
-                                "newest yt-dlp, which is the first thing to try when a site " +
-                                "suddenly stops working.",
+                            "Teal keeps this current on its own: it refreshes on first " +
+                                "run, weekly after that, and again on its own if a site " +
+                                "stops working. This button just does it right now.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.weight(1f),

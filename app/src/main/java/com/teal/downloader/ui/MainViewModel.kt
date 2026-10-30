@@ -11,6 +11,7 @@ import com.teal.downloader.data.model.DownloadSettings
 import com.teal.downloader.data.model.DownloadTask
 import com.teal.downloader.data.model.YtdlInfo
 import com.teal.downloader.data.prefs.SettingsRepository
+import com.teal.downloader.downloader.DownloadException
 import com.teal.downloader.downloader.DownloadManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -116,8 +117,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                         state.copy(
                             isFetching = false,
                             info = null,
-                            error = com.teal.downloader.downloader.DownloadException
-                                .classify(error.message ?: "Could not read that link", url),
+                            // fetchInfo already translated this into something a
+                            // person can act on. Classifying it a second time
+                            // would read Teal's own wording as if it were
+                            // yt-dlp's and could land on the wrong branch.
+                            error = (error as? DownloadException)?.message
+                                ?: DownloadException
+                                    .classify(error.message ?: "Could not read that link", url)
+                                    .message,
                         )
                     },
                 )
