@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -10,9 +12,10 @@ plugins {
 // committed signing/teal-release.p12. CI overwrites that file with the
 // TEAL_KEYSTORE_B64 secret when one is configured, so moving to a private key
 // later needs no change here. See signing/README.md.
-val signingProps = java.util.Properties().apply {
-    val file = rootProject.file("signing/signing.properties")
-    if (file.exists()) file.inputStream().use { load(it) }
+val signingProps = Properties()
+val signingPropsFile = rootProject.file("signing/signing.properties")
+if (signingPropsFile.exists()) {
+    signingPropsFile.inputStream().use { signingProps.load(it) }
 }
 
 android {
@@ -55,7 +58,8 @@ android {
             keyPassword = signingProps.getProperty("keyPassword")
             // The keystore is PKCS12; naming the type keeps older JDKs from
             // guessing wrong.
-            signingProps.getProperty("storeType")?.let { storeType = it }
+            val configuredStoreType = signingProps.getProperty("storeType")
+            if (configuredStoreType != null) storeType = configuredStoreType
         }
     }
 
