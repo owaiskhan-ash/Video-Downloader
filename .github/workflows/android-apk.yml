@@ -240,48 +240,63 @@ jobs:
           echo "release body updated:"
           gh release view "$TAG" --json body -q .body | head -20
 
-      - name: Publish build logs on failure
-        # The only way to see a failure from a sandbox that cannot reach the
-        # Actions log host: push the interesting output to a ci-logs branch.
-        # Deliberately the LAST step, so it also reports failures in the
-        # artefact and release steps rather than only the build.
-        if: failure()
+      - name: Publish build report to ci-logs
+        # Runs on success as well as failure. This sandbox can fetch neither step
+        # logs nor artefacts, so the ci-logs branch is the only way to read the
+        # lint findings before deciding whether a build is release-worthy —
+        # waiting for the release notes would mean publishing first and checking
+        # afterwards.
+        if: always()
         run: |
           {
-            echo "# CI failure log — run ${{ github.run_id }} / ${{ github.ref_name }}"
+            echo "# CI report — run ${{ github.run_id }} / ${{ github.ref_name }} / job ${{ job.status }}"
             echo
-            echo "== step outcomes =="
-            echo "(see the run page; this sandbox cannot fetch them)"
-            echo
-            echo "== gradle console (tail 400) =="
-            tail -n 400 build-console.log 2>/dev/null || echo "(no console log)"
-            echo
-            echo "== artefact collection =="
-            cat collect.log 2>/dev/null || echo "(collect step did not run)"
-            echo
-            echo "== release directory =="
-            ls -la release/ 2>/dev/null || echo "(no release directory)"
+            echo "== lint =="
+            LINT=app/build/reports/lint-results-debug.txt
+            if [ -f "$LINT" ]; then
+              echo "errors:   $(grep -c ': Error:' "$LINT" 2>/dev/null || echo 0)"
+              echo "warnings: $(grep -c ': Warning:' "$LINT" 2>/dev/null || echo 0)"
+              echo
+              echo "-- every error-severity finding --"
+              grep ': Error:' "$LINT" | head -80 || echo "(none)"
+              echo
+              echo "-- NewApi / InlinedApi / MissingPermission, any severity --"
+              grep -E '\[(NewApi|InlinedApi|MissingPermission)\]' "$LINT" | head -40 || echo "(none)"
+              echo
+              echo "-- issue ids by frequency --"
+              grep -oE '\[[A-Za-z]+\]$' "$LINT" | sort | uniq -c | sort -rn | head -25 || true
+              echo
+              echo "-- report tail --"
+              tail -4 "$LINT"
+            else
+              echo "(no lint report produced)"
+              tail -n 40 lint-console.log 2>/dev/null || true
+            fi
             echo
             echo "== unit test results =="
             for f in $(find app/build/test-results -name '*.xml' 2>/dev/null | head -20); do
               echo "-- $f --"
-              grep -oE '(testcase name="[^"]*"|<failure[^>]*message="[^"]{0,400})' "$f" | head -40
+              grep -oE '(testsuite name="[^"]*" tests="[0-9]*"[^>]*|testcase name="[^"]*"|<failure[^>]*message="[^"]{0,300})' "$f" | head -60
             done
-            echo
-            echo "== lint =="
-            tail -n 120 app/build/reports/lint-results-debug.txt 2>/dev/null || echo "(no lint report)"
             echo
             echo "== build outputs =="
             find app/build/outputs -type f 2>/dev/null | head -40 || echo "(none)"
+            echo
+            echo "== artefact collection =="
+            cat collect.log 2>/dev/null || echo "(collect step did not run)"
+            echo
+            echo "== gradle console (tail 250) =="
+            tail -n 250 build-console.log 2>/dev/null || echo "(no console log)"
             echo
             echo "== environment =="
             df -h / | tail -1
             java -version 2>&1 | head -2
             gradle --version 2>&1 | grep -E "Gradle|JVM:" || true
-          } > ci-failure.log
-          wc -l ci-failure.log
+          } > ci-report.log
+          wc -l ci-report.log
           git config user.name "ci-log-bot"
           git config user.email "ci@localhost"
-          git add -f ci-failure.log
-          git commit -q -m "ci: failure logs for run ${{ github.run_id }}" || echo "nothing to commit"
+          git add -f ci-report.log
+          git rm -q --cached ci-failure.log 2>/dev/null || true
+          git commit -q -m "ci: report for run ${{ github.run_id }} (${{ job.status }})" || echo "nothing to commit"
           git push origin HEAD:refs/heads/ci-logs --force || echo "log push failed"
