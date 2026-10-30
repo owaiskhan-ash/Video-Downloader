@@ -1,6 +1,8 @@
 name: android-apk
 
-# Builds the Teal debug APK and attaches it to the release for the pushed tag.
+# Builds the signed Teal release APKs and attaches them to the release for the
+# pushed tag. Signing uses signing/teal-release.p12, or the TEAL_KEYSTORE_B64
+# secret when one is configured; see signing/README.md.
 #
 # There is no gradle wrapper in this repo on purpose: gradle-wrapper.jar is a
 # binary blob, and `gradle/actions/setup-gradle` installs a pinned Gradle
@@ -62,6 +64,22 @@ jobs:
             "platform-tools" 2>&1 | tail -5
           ls "$SDK/platforms" "$SDK/build-tools"
 
+      - name: Prefer the private signing key when one is configured
+        env:
+          KEYSTORE_B64: ${{ secrets.TEAL_KEYSTORE_B64 }}
+        run: |
+          # signing/teal-release.p12 is committed and public (see
+          # signing/README.md). If the repository ever gets a TEAL_KEYSTORE_B64
+          # secret it takes over, so the key stops being public while every
+          # existing install keeps updating normally.
+          if [ -n "$KEYSTORE_B64" ]; then
+            printf '%s' "$KEYSTORE_B64" | base64 -d > signing/teal-release.p12
+            echo "signing with the keystore from repository secrets"
+          else
+            echo "no TEAL_KEYSTORE_B64 secret; signing with the committed keystore"
+          fi
+          ls -l signing/
+
       - name: Run unit tests and build the APK
         run: |
           # tee, don't just run: step logs live on a host that restricted
@@ -70,7 +88,7 @@ jobs:
           set +e
           gradle --no-daemon --stacktrace \
             :app:testDebugUnitTest \
-            :app:assembleDebug 2>&1 | tee build-console.log
+            :app:assembleRelease 2>&1 | tee build-console.log
           status=${PIPESTATUS[0]}
           echo "gradle exit: $status"
           exit "$status"
@@ -106,14 +124,14 @@ jobs:
             # ABI splits produce one APK per architecture; name each so a user
             # knows which one to install.
             count=0
-            for apk in app/build/outputs/apk/debug/*.apk; do
+            for apk in app/build/outputs/apk/release/*.apk; do
               [ -e "$apk" ] || continue
               base="$(basename "$apk" .apk)"
               # "|| true" so a name without a recognisable ABI cannot abort the
               # step through grep's exit status.
               abi="$(printf '%s' "$base" | grep -oE 'arm64-v8a|armeabi-v7a|x86_64|x86' | head -1 || true)"
               abi="${abi:-universal}"
-              out="release/teal-${TAG}-${abi}-debug.apk"
+              out="release/teal-${TAG}-${abi}.apk"
               cp "$apk" "$out"
               count=$((count + 1))
               echo "collected $out ($(stat -c%s "$out") bytes)"
@@ -133,7 +151,7 @@ jobs:
       - name: Upload APKs as workflow artefacts
         uses: actions/upload-artifact@v4
         with:
-          name: teal-android-debug-apks
+          name: teal-android-release-apks
           path: release/
           retention-days: 30
 
@@ -181,7 +199,7 @@ jobs:
             echo '```'
             if [ -n "$ARM64" ] && [ -n "$AAPT" ]; then
               "$AAPT" dump badging "$ARM64" 2>/dev/null | \
-                grep -E "^package|^application-label|^launchable-activity|^sdkVersion|^targetSdkVersion|^uses-permission|^native-code" || \
+                grep -E "^package|^application-label|^launchable-activity|^sdkVersion|^targetSdkVersion|^uses-permission|^native-code|^application-debuggable" || \
                 echo "(aapt2 produced nothing)"
             else
               echo "(aapt2 or the arm64 APK was not found)"
@@ -196,6 +214,23 @@ jobs:
                 awk '{print $4}' | grep -E '^lib/arm64-v8a/.+\.so$' | sort || echo "(no native libs listed)"
             fi
             echo '```'
+            echo
+            echo "### Signature (arm64-v8a)"
+            echo
+            echo '```'
+            APKSIGNER="$(ls "$ANDROID_HOME"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1)"
+            if [ -n "$ARM64" ] && [ -n "$APKSIGNER" ]; then
+              "$APKSIGNER" verify --print-certs "$ARM64" 2>&1 | \
+                grep -E "^Verifies|scheme|Number of signers|certificate DN|SHA-256 digest" || \
+                echo "(apksigner produced nothing)"
+            else
+              echo "(apksigner or the arm64 APK was not found)"
+            fi
+            echo '```'
+            echo
+            echo 'The SHA-256 digest above must match the fingerprint published in'
+            echo '`signing/README.md`. `application-debuggable` is absent from the'
+            echo 'manifest dump above, which is what makes this a release build.'
             echo
             echo 'These are what make a download possible: `libpython.so` carries the yt-dlp'
             echo 'interpreter, `libffmpeg.so` and `libffprobe.so` do the muxing and'

@@ -39,21 +39,45 @@ devices, `x86_64` for emulators. Per-ABI APKs are roughly half the size a
 universal one would be, because the Python, ffmpeg and aria2c native libraries
 are the bulk of it.
 
-It is a **debug** build signed with the debug key: sideloadable, not Play-eligible.
+Since v0.4.0 these are **release** builds: `debuggable` off, application id
+`com.teal.downloader` with no `.debug` suffix, signed with the key in
+[`signing/`](signing/README.md). Earlier releases were debug builds under
+`com.teal.downloader.debug`, so **upgrade from v0.3.0 or older means uninstalling
+first** — Android treats a different application id as a different app, and the
+download history does not carry over.
+
+The signing key is committed to this public repository, which was a deliberate
+trade to get signed releases without secrets infrastructure. It means anyone can
+produce an APK that Android would accept as an update to Teal, so verify what you
+install against the published certificate fingerprint:
+
+```bash
+apksigner verify --print-certs teal-v0.4.0-arm64-v8a.apk
+# Signer #1 certificate SHA-256 digest must match signing/README.md
+```
+
+Every release also ships `SHA256SUMS.txt`. Adding a `TEAL_KEYSTORE_B64`
+repository secret moves signing to a private key with no change to any existing
+install — see [`signing/README.md`](signing/README.md).
+
+Release builds are **not minified**, on purpose: R8 renames classes, and
+`youtubedl-android` crosses a JNI boundary where native code resolves classes by
+name, so a rename would fail at runtime rather than at build time. The keep rules
+for switching it on are already in `app/proguard-rules.pro`.
 
 ## Build
 
 CI does it on every tag:
 
 ```bash
-git tag v0.2.0 && git push origin v0.2.0
+git tag v0.4.0 && git push origin v0.4.0
 ```
 
 Locally, with JDK 17 and the Android SDK:
 
 ```bash
 gradle :app:testDebugUnitTest      # JVM unit tests
-gradle :app:assembleDebug          # -> app/build/outputs/apk/debug/*.apk
+gradle :app:assembleRelease        # -> app/build/outputs/apk/release/*.apk
 ```
 
 There is deliberately no Gradle wrapper: `gradle-wrapper.jar` is a binary blob in
