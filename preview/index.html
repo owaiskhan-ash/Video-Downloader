@@ -77,7 +77,8 @@
   .field input:focus+label,.field.filled label{top:6px;font-size:11px;color:var(--primary)}
   .field.filled input{color:var(--on-surface)}
   .field.filled input:focus{color:var(--primary)}
-  .field .trailing{position:absolute;right:6px;top:9px;display:flex;gap:2px}
+  .field .trailing{position:absolute;right:6px;top:50%;transform:translateY(-50%);
+    display:flex;gap:2px;align-items:center}
   .iconbtn{background:none;border:none;cursor:pointer;padding:7px;border-radius:50%;
     display:flex;align-items:center;justify-content:center;color:var(--primary)}
   .iconbtn.muted{color:var(--on-surface-variant)}
@@ -120,7 +121,7 @@
   @keyframes slide{0%{margin-left:-35%}100%{margin-left:100%}}
   .detail{font-size:12.5px;color:var(--on-surface-variant);margin-top:8px;line-height:1.5}
   .detail.err{color:var(--error)}
-  .actions-end{display:flex;justify-content:flex-end;gap:2px;margin-top:6px}
+  .actions-end{display:flex;justify-content:flex-end;align-items:center;gap:2px;margin-top:6px}
 
   .empty{display:flex;flex-direction:column;align-items:center;text-align:center;padding:56px 32px}
   .empty .glyph{width:72px;height:72px;border-radius:24px;background:var(--container);
@@ -145,15 +146,18 @@
   .switch.on{background:var(--primary);border-color:var(--primary)}
   .switch.on i{left:23px;background:var(--on-primary)}
 
-  .nav{flex:none;height:74px;background:var(--container);display:flex;border-top:1px solid var(--outline-variant)}
+  .nav{flex:none;height:72px;background:var(--container);display:flex;border-top:1px solid var(--outline-variant)}
   .nav button{flex:1;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;gap:4px;color:var(--on-surface-variant);font-family:inherit;
-    font-size:10.5px;padding-top:8px;position:relative}
-  .nav button svg{width:22px;height:22px}
+    align-items:center;justify-content:center;gap:5px;color:var(--on-surface-variant);
+    font-family:inherit;font-size:10.5px;padding:0}
+  /* The selected pill is a real element that centres its own icon, rather than
+     an absolutely positioned ::before whose offset had to be guessed. */
+  .nav .ic{width:58px;height:30px;border-radius:999px;display:flex;align-items:center;
+    justify-content:center;transition:background .18s}
+  .nav .ic svg{width:22px;height:22px;display:block}
+  .nav .lbl{line-height:1}
   .nav button.active{color:var(--primary)}
-  .nav button.active::before{content:"";position:absolute;top:8px;width:56px;height:28px;
-    border-radius:999px;background:var(--primary-container);z-index:0}
-  .nav button.active svg,.nav button.active span{position:relative;z-index:1}
+  .nav button.active .ic{background:var(--primary-container)}
 
   /* bottom sheet */
   .scrim{position:absolute;inset:0;background:rgba(0,0,0,.6);opacity:0;pointer-events:none;
@@ -295,7 +299,8 @@
   </div>
 
   <div class="screen" id="s-templates">
-    <header class="appbar"><div class="row"><div><h2>Command templates</h2></div></div></header>
+    <header class="appbar"><div class="row"><div><h2>Command templates</h2><p>Settings &rsaquo; Advanced</p></div>
+      <div class="actions"><button class="textbtn" id="tplBack">Back</button></div></div></header>
     <div class="card"><div class="row-click" style="padding-top:0">
       <div class="left"><div class="t">Audio at 320k</div><div class="mono" style="margin-top:5px">-x --audio-format mp3 --audio-quality 0 --embed-thumbnail</div></div>
       <button class="iconbtn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
@@ -331,11 +336,10 @@
   </div>
 
   <nav class="nav">
-    <button class="active" data-screen="s-home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 19h14"/></svg><span>Download</span></button>
-    <button data-screen="s-queue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="m10 9 5 2.5-5 2.5z" fill="currentColor" stroke="none"/></svg><span>Queue</span></button>
-    <button data-screen="s-history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg><span>History</span></button>
-    <button data-screen="s-templates"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 8 4 4-4 4M12 16h7"/></svg><span>Commands</span></button>
-    <button data-screen="s-settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2 2 2 0 1 1-4 0 1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 15a2 2 0 1 1 0-4 1.7 1.7 0 0 0 1.4-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 3a2 2 0 1 1 4 0 1.7 1.7 0 0 0 2.9 1.4l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 21 11a2 2 0 1 1 0 4z"/></svg><span>Settings</span></button>
+    <button class="active" data-screen="s-home"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 19h14"/></svg></span><span class="lbl">Download</span></button>
+    <button data-screen="s-queue"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="m10 9 5 2.5-5 2.5z" fill="currentColor" stroke="none"/></svg></span><span class="lbl">Queue</span></button>
+    <button data-screen="s-history"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg></span><span class="lbl">History</span></button>
+    <button data-screen="s-settings"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2 2 2 0 1 1-4 0 1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 15a2 2 0 1 1 0-4 1.7 1.7 0 0 0 1.4-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 3a2 2 0 1 1 4 0 1.7 1.7 0 0 0 2.9 1.4l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 21 11a2 2 0 1 1 0 4z"/></svg></span><span class="lbl">Settings</span></button>
   </nav>
 </div>
 
@@ -366,13 +370,18 @@ const SAMPLE = {
 let selectedVideo = null, selectedAudio = null, audioTab = false, info = null;
 const tasks = [], history = [];
 
-/* ---- tabs ---- */
-$$('.nav button').forEach(b => b.addEventListener('click', () => {
-  $$('.nav button').forEach(x => x.classList.remove('active'));
-  b.classList.add('active');
-  $$('.screen').forEach(s => s.classList.remove('active'));
-  $('#' + b.dataset.screen).classList.add('active');
-}));
+/* ---- tabs ----
+   showScreen drives everything: the four nav tabs plus Command templates, which
+   no longer has a tab and is opened from Settings instead. A screen with no
+   matching nav button leaves the bar unhighlighted, the way the app behaves when
+   a destination is pushed on top of a tab. */
+function showScreen(id){
+  $$('.screen').forEach(sc => sc.classList.toggle('active', sc.id === id));
+  $$('.nav button').forEach(b => b.classList.toggle('active', b.dataset.screen === id));
+  const active = $('.screen.active');
+  if (active) active.scrollTop = 0;
+}
+$$('.nav button').forEach(b => b.addEventListener('click', () => showScreen(b.dataset.screen)));
 
 /* ---- URL field ---- */
 const urlInput = $('#url');
@@ -619,6 +628,7 @@ const SETTINGS = [
     {t:'value', title:'Playlist items', sub:'Overrides the above, e.g. 1-5,8', value:'—'},
   ]],
   ['ADVANCED', [
+    {t:'link', title:'Command templates', sub:'Reusable raw yt-dlp arguments', screen:'s-templates'},
     {t:'toggle', title:'Restrict filenames', sub:'ASCII only, no spaces', on:false},
     {t:'value', title:'Proxy', value:'—'},
     {t:'value', title:'User agent', value:'—'},
@@ -631,6 +641,9 @@ $('#settingsBody').innerHTML = SETTINGS.map(([group, rows]) => `
   <div class="card">${rows.map((r,i) => r.t === 'toggle'
     ? `<div class="row-click" style="${i?'':''}"><div class="left"><div class="t">${r.title}</div>${r.sub?`<div class="s">${r.sub}</div>`:''}</div>
        <div class="switch${r.on?' on':''}" data-k="${group}-${i}"><i></i></div></div>`
+    : r.t === 'link'
+    ? `<div class="row-click" data-goto="${r.screen}"><div class="left"><div class="t">${r.title}</div>${r.sub?`<div class="s">${r.sub}</div>`:''}</div>
+       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.2" style="flex:none"><path d="m9 6 6 6-6 6"/></svg></div>`
     : `<div class="row-click"><div class="left"><div class="t">${r.title}</div>${r.sub?`<div class="s">${r.sub}</div>`:''}</div>
        ${r.value?`<span class="v">${r.value}</span>`:''}</div>`
   ).join('<div class="divider"></div>')}</div>`).join('') + `
@@ -647,14 +660,13 @@ $('#settingsBody').innerHTML = SETTINGS.map(([group, rows]) => `
 $$('#settingsBody .switch').forEach(sw => sw.addEventListener('click', e => {
   e.stopPropagation(); sw.classList.toggle('on');
 }));
+$$('#settingsBody [data-goto]').forEach(el =>
+  el.addEventListener('click', () => showScreen(el.dataset.goto)));
 
-function switchTab(id){
-  $$('.nav button').forEach(b => {
-    const active = b.dataset.screen === id;
-    b.classList.toggle('active', active);
-    if(active) b.click();
-  });
-}
+// Command templates has no tab of its own, so it needs an explicit way back.
+$('#tplBack').addEventListener('click', () => showScreen('s-settings'));
+
+function switchTab(id){ showScreen(id); }
 syncField();
 </script>
 </body>

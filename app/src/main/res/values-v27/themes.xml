@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- API 27+ only: light navigation bar icons are what a dark app wants.
+         Below 27 the attribute does not exist, so it lives here rather than in
+         values/themes.xml, where lint (correctly) rejects it. -->
+    <style name="Theme.Teal" parent="Base.Theme.Teal">
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+</resources>

@@ -1,13 +1,16 @@
 package com.teal.downloader
 
 import android.content.Intent
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.core.content.ContextCompat
 import com.teal.downloader.ui.MainViewModel
 import com.teal.downloader.ui.navigation.TealAppRoot
 import com.teal.downloader.ui.theme.TealTheme
@@ -26,7 +29,20 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* denied is fine */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
+        // Dark-only app. enableEdgeToEdge()'s default SystemBarStyle.auto follows
+        // the *system* light/dark setting, so on a device set to light mode it
+        // would ask for dark system-bar icons on this app's dark bars and leave
+        // them unreadable. Force dark, which means light icons. The navigation
+        // bar scrim is the app background, for the API levels that cannot make
+        // the bar transparent.
+        enableEdgeToEdge(
+            // android.graphics.Color.TRANSPARENT is already an Int; toArgb() is a
+            // Compose extension on a different Color type and does not apply here.
+            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(
+                ContextCompat.getColor(this, R.color.teal_background),
+            ),
+        )
         super.onCreate(savedInstanceState)
         handleIncoming(intent)
         askForNotificationPermission()

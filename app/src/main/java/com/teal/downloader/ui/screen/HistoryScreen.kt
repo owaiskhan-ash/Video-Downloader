@@ -151,7 +151,13 @@ private fun HistoryCard(
         }
 
         Spacer(Modifier.height(4.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+            // Without this the row defaults to top alignment, which puts the
+            // icon glyphs above the centre of their 48dp touch targets.
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             IconButton(onClick = onRedownload) {
                 Icon(Icons.Rounded.Download, contentDescription = "Download again",
                     tint = MaterialTheme.colorScheme.primary)

@@ -62,14 +62,13 @@ fun TealAppRoot(viewModel: MainViewModel) {
         viewModel.onSharedLink(url)
     }
 
-    // Five tabs is the practical limit for a bottom bar; Commands is the one that
-    // can live behind Settings on a narrow screen, but keeping it here makes the
-    // yt-dlp templates discoverable, which is the point of the feature.
+    // Four tabs. Command templates stay a destination but are reached from
+    // Settings instead of the bar: they are a power-user feature that most
+    // sessions never touch, and a fifth item squeezes the labels.
     val tabs = listOf(
         Destination.HOME,
         Destination.QUEUE,
         Destination.HISTORY,
-        Destination.TEMPLATES,
         Destination.SETTINGS,
     )
 
@@ -93,7 +92,11 @@ fun TealAppRoot(viewModel: MainViewModel) {
                         },
                         label = { Text(destination.label, style = MaterialTheme.typography.labelSmall) },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.onPrimary,
+                            // onPrimaryContainer is the pairing for a
+                            // primaryContainer indicator. onPrimary is near-black
+                            // in this palette, which left the selected icon
+                            // barely legible against the pill behind it.
+                            selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
                             selectedTextColor = MaterialTheme.colorScheme.primary,
                             indicatorColor = MaterialTheme.colorScheme.primaryContainer,
                             unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,

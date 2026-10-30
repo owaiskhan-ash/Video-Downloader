@@ -107,7 +107,10 @@ fun HomeScreen(viewModel: MainViewModel) {
                     keyboardType = KeyboardType.Uri,
                     onImeAction = viewModel::fetchInfo,
                     trailingIcon = {
-                        Row {
+                        Row(
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
                             IconButton(onClick = {
                                 clipboard.getText()?.text?.let { text ->
                                     // Shared text often carries a title around the

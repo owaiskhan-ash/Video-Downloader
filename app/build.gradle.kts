@@ -14,8 +14,8 @@ android {
         applicationId = "com.teal.downloader"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Ship every language we actually translate rather than all of AOSP's.
@@ -88,9 +88,14 @@ android {
     }
 
     // Lint findings should not fail a build; they are reported, not enforced.
+    // The text report is what CI publishes, since it is the only static check
+    // available without a device — NewApi in particular matters here, because
+    // minSdk is 24 while the MediaStore publish path uses Q+ APIs.
     lint {
         abortOnError = false
         checkReleaseBuilds = false
+        warningsAsErrors = false
+        textReport = true
     }
 
     testOptions {

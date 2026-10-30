@@ -1,5 +1,6 @@
 package com.teal.downloader.downloader
 
+import android.annotation.SuppressLint
 import android.content.Context
 import com.teal.downloader.data.db.HistoryEntity
 import com.teal.downloader.data.db.TealDatabase
@@ -34,6 +35,7 @@ import kotlinx.coroutines.launch
  */
 object DownloadManager {
 
+    /** Always the application context — see [init]. */
     private lateinit var appContext: Context
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -44,7 +46,13 @@ object DownloadManager {
     private val requests = ConcurrentHashMap<String, DownloadRequest>()
     private val jobs = ConcurrentHashMap<String, Job>()
 
+    // Lint flags these two as static references to classes holding a Context.
+    // Both are constructed in init() from appContext, which is the *application*
+    // context, so neither can pin an Activity. Suppressing here rather than at
+    // the field type keeps the reasoning next to the thing being reasoned about.
+    @SuppressLint("StaticFieldLeak")
     private var ytdlp: YtdlpManager? = null
+    @SuppressLint("StaticFieldLeak")
     private var settingsRepo: SettingsRepository? = null
 
     /** Guards [init] against a second Application.onCreate in the same process. */

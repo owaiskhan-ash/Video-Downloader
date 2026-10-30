@@ -1,14 +1,17 @@
 package com.teal.downloader.util
 
+import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import com.teal.downloader.MainActivity
 import com.teal.downloader.R
 import com.teal.downloader.data.model.DownloadTask
@@ -112,8 +115,21 @@ object NotificationUtil {
     }
 
     private fun post(context: Context, id: Int, notification: Notification) {
-        // On API 33+ a missing POST_NOTIFICATIONS grant throws; a progress
-        // notification is never worth crashing the download over.
+        // POST_NOTIFICATIONS is a runtime permission on API 33+ and the user can
+        // decline it. The download does not need notifications to succeed, so a
+        // denial should cost the progress display and nothing else.
+        //
+        // The guard is inline on purpose: lint will not carry a permission check
+        // across a method boundary, and neither will the next reader.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS,
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return
         runCatching { NotificationManagerCompat.from(context).notify(id, notification) }
     }
 
