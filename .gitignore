@@ -23,9 +23,14 @@ captures/
 .DS_Store
 Thumbs.db
 
-# Keystores never belong in a repository.
+# Keystores never belong in a repository — with one deliberate exception:
+# signing/teal-release.p12 is committed on purpose so CI can produce signed
+# release builds without secrets access. signing/README.md records the risk that
+# was accepted, the certificate fingerprint to verify an install against, and how
+# to move to a private key later without breaking existing installs.
 *.jks
 *.keystore
+!signing/teal-release.p12
 
 # Room schemas are generated but intentionally reviewed, so they are kept:
 # see the room.schemaLocation KSP arg in app/build.gradle.kts.

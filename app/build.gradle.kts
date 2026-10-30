@@ -1,9 +1,21 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
+}
+
+// Signing values live in signing/signing.properties, which unlocks the
+// committed signing/teal-release.p12. CI overwrites that file with the
+// TEAL_KEYSTORE_B64 secret when one is configured, so moving to a private key
+// later needs no change here. See signing/README.md.
+val signingProps = Properties()
+val signingPropsFile = rootProject.file("signing/signing.properties")
+if (signingPropsFile.exists()) {
+    signingPropsFile.inputStream().use { signingProps.load(it) }
 }
 
 android {
@@ -14,8 +26,8 @@ android {
         applicationId = "com.teal.downloader"
         minSdk = 24
         targetSdk = 35
-        versionCode = 4
-        versionName = "0.3.0"
+        versionCode = 5
+        versionName = "0.4.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Ship every language we actually translate rather than all of AOSP's.
@@ -34,6 +46,23 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            // storeFile is resolved against the project directory, so point it
+            // at the copy the workflow may have just replaced.
+            storeFile = rootProject.file(
+                signingProps.getProperty("storeFile", "signing/teal-release.p12"),
+            )
+            storePassword = signingProps.getProperty("storePassword")
+            keyAlias = signingProps.getProperty("keyAlias")
+            keyPassword = signingProps.getProperty("keyPassword")
+            // The keystore is PKCS12; naming the type keeps older JDKs from
+            // guessing wrong.
+            val configuredStoreType = signingProps.getProperty("storeType")
+            if (configuredStoreType != null) storeType = configuredStoreType
+        }
+    }
+
     buildTypes {
         debug {
             // Debug is what CI can produce without a keystore, and it is
@@ -43,12 +72,21 @@ android {
             versionNameSuffix = "-debug"
         }
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            // Minification stays off on purpose. R8 renames classes, and
+            // youtubedl-android crosses a JNI boundary where native code looks
+            // classes up by name — a rename there fails at runtime, not at build
+            // time, and no device is available here to catch it. The saving
+            // would be a few MB off an APK whose size is dominated by the
+            // Python/ffmpeg/aria2c native libraries that R8 cannot touch.
+            // proguard-rules.pro already carries the keep rules for when this is
+            // switched on against a device that can verify it.
+            isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 

@@ -1,3 +1,15 @@
+# NOTE: release builds currently set isMinifyEnabled = false, so these rules are
+# staged rather than active. They are the prerequisite for switching it on, and
+# switching it on needs a device to verify against — R8 failures at the JNI
+# boundary below appear at runtime, not at build time.
+
+# Native methods are resolved by name from C++, so their declaring classes cannot
+# be renamed. This is the boundary that matters most: youtubedl-android unzips a
+# Python runtime and drives it through JNI.
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
+
 # yt-dlp/ffmpeg/aria2c are invoked as native processes through JNI; nothing to
 # reflect on, but the library's own classes must not be renamed or stripped.
 -keep class com.yausername.** { *; }
