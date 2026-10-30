@@ -55,8 +55,15 @@ build_one() {
   # the clang triple's own defaults apply.
   local triple ffarch api
   case "$arch" in
-    arm64)  triple="aarch64-linux-android";    ffarch="aarch64"; api=21 ;;
-    armv7)  triple="armv7a-linux-androideabi"; ffarch="arm";     api=21 ;;
+    # api=24 on purpose, matching android.minapi in buildozer.spec.
+    # At api=21 the armeabi-v7a x264 build dies with
+    #     error: call to undeclared function 'fseeko'
+    # because x264's config.h does '#define fseek fseeko' and the NDK only
+    # exposes the large-file stdio functions on 32-bit ABIs from API 24 up.
+    # 64-bit arm64 happened to tolerate 21, but keep both levels the same as
+    # the app's own minimum.
+    arm64)  triple="aarch64-linux-android";    ffarch="aarch64"; api=24 ;;
+    armv7)  triple="armv7a-linux-androideabi"; ffarch="arm";     api=24 ;;
     *) echo "unknown arch: $arch" >&2; return 1 ;;
   esac
 

@@ -166,13 +166,20 @@ jobs:
             done
           } 2>&1 | tee android/ffmpeg-build.log
           bash android/ffmpeg_ndk_build.sh both 2>&1 | tee -a android/ffmpeg-build.log
-          if [ "${PIPESTATUS[0]}" = "0" ]; then
-            echo "FFMPEG_BUNDLED=yes" >> "$GITHUB_ENV"
+          rc="${PIPESTATUS[0]}"
+          # Judge by the binaries that exist, not the exit code. In v0.1.18 the
+          # arm64 ffmpeg built fine (16.5 MB, and it did ship in the APK) while
+          # armeabi-v7a's x264 failed, so `both` returned non-zero and this
+          # reported FFMPEG_BUNDLED=no for an APK that actually had ffmpeg.
+          echo "exit code: $rc"
+          ls -la android/assets/ffmpeg/*/ffmpeg 2>/dev/null || echo "no ffmpeg binaries"
+          if compgen -G "android/assets/ffmpeg/*/ffmpeg" > /dev/null; then
+            echo "FFMPEG_BUNDLED=partial-or-full ($(ls -d android/assets/ffmpeg/*/ | wc -l) arch dirs)" >> "$GITHUB_ENV"
           else
-            echo "::warning::ffmpeg cross-compile failed; APK will ship without on-device ffmpeg"
+            echo "::warning::ffmpeg cross-compile produced nothing; APK will ship without on-device ffmpeg"
             echo "FFMPEG_BUNDLED=no" >> "$GITHUB_ENV"
           fi
-          echo "last 40 lines:"; tail -40 android/ffmpeg-build.log
+          echo "last 40 lines:"; tail -n 40 android/ffmpeg-build.log
 
       - name: Stage engine + UI into android/
         run: bash android/prepare.sh
