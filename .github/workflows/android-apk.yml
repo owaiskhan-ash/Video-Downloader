@@ -75,63 +75,50 @@ jobs:
           echo "gradle exit: $status"
           exit "$status"
 
-      - name: Publish build logs on failure
-        # The only way to see a failure from a sandbox that cannot reach the
-        # Actions log host: push the interesting output to a ci-logs branch.
-        if: failure()
-        run: |
-          {
-            echo "# CI failure log — run ${{ github.run_id }} / ${{ github.ref_name }}"
-            echo
-            echo "== gradle console (tail 500) =="
-            tail -n 500 build-console.log 2>/dev/null || echo "(no console log)"
-            echo
-            echo "== unit test results =="
-            for f in $(find app/build/test-results -name '*.xml' 2>/dev/null | head -20); do
-              echo "-- $f --"
-              grep -oE '(testcase name="[^"]*"|<failure[^>]*message="[^"]{0,400})' "$f" | head -40
-            done
-            echo
-            echo "== outputs =="
-            find app/build/outputs -type f 2>/dev/null | head -40 || echo "(none)"
-            echo
-            echo "== environment =="
-            df -h / | tail -1
-            java -version 2>&1 | head -2
-            gradle --version 2>&1 | grep -E "Gradle|JVM:" || true
-          } > ci-failure.log
-          wc -l ci-failure.log
-          git config user.name "ci-log-bot"
-          git config user.email "ci@localhost"
-          git add -f ci-failure.log
-          git commit -q -m "ci: failure logs for run ${{ github.run_id }}" || echo "nothing to commit"
-          git push origin HEAD:refs/heads/ci-logs --force || echo "log push failed"
-
       - name: Collect and rename the APKs
         id: artefacts
         run: |
-          set -x
-          TAG="${GITHUB_REF_NAME:-$(git rev-parse --short HEAD)}"
-          mkdir -p release
-          # ABI splits produce one APK per architecture; name each so a user
-          # knows which one to install.
-          count=0
-          for apk in app/build/outputs/apk/debug/*.apk; do
-            [ -e "$apk" ] || continue
-            base="$(basename "$apk" .apk)"
-            abi="$(echo "$base" | grep -oE 'arm64-v8a|armeabi-v7a|x86_64|x86' | head -1)"
-            abi="${abi:-universal}"
-            out="release/teal-${TAG}-${abi}-debug.apk"
-            cp "$apk" "$out"
-            count=$((count + 1))
-          done
-          if [ "$count" -eq 0 ]; then
-            echo "ERROR: no APK produced"
-            find app/build/outputs -type f 2>/dev/null | head -40
-            exit 1
-          fi
-          ls -la release/
-          sha256sum release/*.apk | tee release/SHA256SUMS.txt
+          # Captured to a file as well as the console: step logs live on a host
+          # this sandbox cannot reach, so the failure-report step republishes it.
+          {
+            set -x
+            RAW_REF="${GITHUB_REF_NAME:-$(git rev-parse --short HEAD)}"
+            # A branch name may contain "/" (arena/xyz-branch), which would turn
+            # the output path into a nonexistent subdirectory and make cp fail.
+            # Flatten it into something filename-safe; tags are unaffected.
+            TAG="$(printf '%s' "$RAW_REF" | tr '/' '-')"
+            echo "ref=$RAW_REF -> tag=$TAG"
+
+            mkdir -p release
+            echo "== APKs Gradle produced =="
+            find app/build/outputs -name '*.apk' -printf '%p  %s bytes\n' 2>/dev/null || true
+
+            # ABI splits produce one APK per architecture; name each so a user
+            # knows which one to install.
+            count=0
+            for apk in app/build/outputs/apk/debug/*.apk; do
+              [ -e "$apk" ] || continue
+              base="$(basename "$apk" .apk)"
+              # "|| true" so a name without a recognisable ABI cannot abort the
+              # step through grep's exit status.
+              abi="$(printf '%s' "$base" | grep -oE 'arm64-v8a|armeabi-v7a|x86_64|x86' | head -1 || true)"
+              abi="${abi:-universal}"
+              out="release/teal-${TAG}-${abi}-debug.apk"
+              cp "$apk" "$out"
+              count=$((count + 1))
+              echo "collected $out ($(stat -c%s "$out") bytes)"
+            done
+            echo "apk count: $count"
+
+            if [ "$count" -eq 0 ]; then
+              echo "ERROR: no APK produced"
+              find app/build/outputs -type f 2>/dev/null | head -40 || true
+              exit 1
+            fi
+            ls -la release/
+            sha256sum release/*.apk | tee release/SHA256SUMS.txt
+          } 2>&1 | tee collect.log
+          exit "${PIPESTATUS[0]}"
 
       - name: Upload APKs as workflow artefacts
         uses: actions/upload-artifact@v4
@@ -151,3 +138,46 @@ jobs:
           gh release upload "$TAG" release/*.apk release/SHA256SUMS.txt --clobber
           echo "Attached to release $TAG:"
           gh release view "$TAG" --json assets -q '.assets[].name'
+
+      - name: Publish build logs on failure
+        # The only way to see a failure from a sandbox that cannot reach the
+        # Actions log host: push the interesting output to a ci-logs branch.
+        # Deliberately the LAST step, so it also reports failures in the
+        # artefact and release steps rather than only the build.
+        if: failure()
+        run: |
+          {
+            echo "# CI failure log — run ${{ github.run_id }} / ${{ github.ref_name }}"
+            echo
+            echo "== step outcomes =="
+            echo "(see the run page; this sandbox cannot fetch them)"
+            echo
+            echo "== gradle console (tail 400) =="
+            tail -n 400 build-console.log 2>/dev/null || echo "(no console log)"
+            echo
+            echo "== artefact collection =="
+            cat collect.log 2>/dev/null || echo "(collect step did not run)"
+            echo
+            echo "== release directory =="
+            ls -la release/ 2>/dev/null || echo "(no release directory)"
+            echo
+            echo "== unit test results =="
+            for f in $(find app/build/test-results -name '*.xml' 2>/dev/null | head -20); do
+              echo "-- $f --"
+              grep -oE '(testcase name="[^"]*"|<failure[^>]*message="[^"]{0,400})' "$f" | head -40
+            done
+            echo
+            echo "== build outputs =="
+            find app/build/outputs -type f 2>/dev/null | head -40 || echo "(none)"
+            echo
+            echo "== environment =="
+            df -h / | tail -1
+            java -version 2>&1 | head -2
+            gradle --version 2>&1 | grep -E "Gradle|JVM:" || true
+          } > ci-failure.log
+          wc -l ci-failure.log
+          git config user.name "ci-log-bot"
+          git config user.email "ci@localhost"
+          git add -f ci-failure.log
+          git commit -q -m "ci: failure logs for run ${{ github.run_id }}" || echo "nothing to commit"
+          git push origin HEAD:refs/heads/ci-logs --force || echo "log push failed"
