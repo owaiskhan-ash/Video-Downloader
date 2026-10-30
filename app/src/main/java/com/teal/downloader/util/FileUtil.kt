@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import androidx.annotation.RequiresApi
 import android.provider.MediaStore
 import android.webkit.MimeTypeMap
 import java.io.File
@@ -54,6 +55,8 @@ object FileUtil {
             }.getOrNull()
         }
 
+    /** Only called from [publishToDownloads] behind an SDK_INT >= Q guard. */
+    @RequiresApi(Build.VERSION_CODES.Q)
     private fun publishViaMediaStore(context: Context, file: File): Uri? {
         val resolver = context.contentResolver
         val values = ContentValues().apply {

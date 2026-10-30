@@ -1,5 +1,6 @@
 package com.teal.downloader.downloader
 
+import android.annotation.SuppressLint
 import android.content.Context
 import com.teal.downloader.data.db.HistoryEntity
 import com.teal.downloader.data.db.TealDatabase
@@ -34,6 +35,8 @@ import kotlinx.coroutines.launch
  */
 object DownloadManager {
 
+    /** Always the application context — see [init]. Not an Activity leak. */
+    @SuppressLint("StaticFieldLeak")
     private lateinit var appContext: Context
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
