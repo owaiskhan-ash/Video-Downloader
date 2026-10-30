@@ -53,7 +53,12 @@ data class DownloadTask(
 object ProgressParser {
     private val SPEED = Regex("""at\s+([0-9]*\.?[0-9]+)\s*([KMGTP]?i?B)/s""")
     private val SIZE = Regex("""of\s+~?\s*([0-9]*\.?[0-9]+)\s*([KMGTP]?i?B)""")
-    private val FRAGMENT = Regex("""fragment\s+(\d+)\s*/\s*(\d+)""", RegexOption.IGNORE_CASE)
+    /**
+     * Fragment counters arrive as a suffix on an ordinary progress line, not on
+     * a line of their own — `(frag 5/10)` when yt-dlp knows the total, `(frag 5)`
+     * when it does not. See yt_dlp/downloader/common.py, report_progress.
+     */
+    private val FRAGMENT = Regex("""frag(?:ment)?\s+(\d+)\s*/\s*(\d+)""", RegexOption.IGNORE_CASE)
 
     fun parseSpeed(line: String?): Double? {
         val m = SPEED.find(line ?: return null) ?: return null

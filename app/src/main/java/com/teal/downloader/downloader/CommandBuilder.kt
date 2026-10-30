@@ -200,24 +200,29 @@ object CommandBuilder {
         val out = mutableListOf<String>()
         val current = StringBuilder()
         var quoted = false
-        var pending = false
+        // Set once a token has seen quotes, whether or not it also has content.
+        // An explicit "" is a deliberate empty argument, and dropping it would
+        // let the following token be consumed as this option's value — for
+        // --exec that means running the next flag as a shell command. Emitting
+        // the empty string instead lets yt-dlp reject it loudly.
+        var sawQuote = false
         for (ch in raw) {
             when {
                 ch == '"' -> {
                     quoted = !quoted
-                    pending = true
+                    sawQuote = true
                 }
                 ch.isWhitespace() && !quoted -> {
-                    if (current.isNotEmpty()) {
-                        out.add(current.toString()); current.setLength(0); pending = false
+                    if (current.isNotEmpty() || sawQuote) {
+                        out.add(current.toString())
+                        current.setLength(0)
+                        sawQuote = false
                     }
                 }
-                else -> {
-                    current.append(ch); pending = true
-                }
+                else -> current.append(ch)
             }
         }
-        if (current.isNotEmpty() || pending) out.add(current.toString())
+        if (current.isNotEmpty() || sawQuote) out.add(current.toString())
         return out
     }
 }

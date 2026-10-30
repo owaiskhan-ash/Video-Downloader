@@ -1,6 +1,7 @@
 package com.teal.downloader.data.model
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -38,8 +39,27 @@ class ProgressParserTest {
 
     @Test
     fun `fragment progress converts to a percentage`() {
-        assertEquals(50f, ProgressParser.parseFragmentProgress("[download] Got file: 5 of 10 fragments")!!, 0.01f)
-        assertNull(ProgressParser.parseFragmentProgress("[download]  10% of 5MiB"))
+        // The real yt-dlp shape: fragment counters ride along as a suffix on the
+        // ordinary progress line, so a byte-based percentage and a fragment
+        // count can appear together.
+        val line = "[download]  42.3% of ~10.00MiB at  1.23MiB/s ETA 00:41 (frag 5/10)"
+        val percent = ProgressParser.parseFragmentProgress(line)
+        assertNotNull(percent)
+        assertEquals(50f, percent!!, 0.01f)
+        assertNull(
+            ProgressParser.parseFragmentProgress(
+                "[download]  10.0% of 5.00MiB at 1.00MiB/s ETA 00:05"
+            )
+        )
+    }
+
+    @Test
+    fun `fragment progress without a total has no percentage`() {
+        // yt-dlp emits "(frag 7)" alone while the fragment count is unknown,
+        // which says nothing about how far along the download is.
+        assertNull(
+            ProgressParser.parseFragmentProgress("[download]  1.00MiB at 1.00MiB/s (frag 7)")
+        )
     }
 
     @Test
