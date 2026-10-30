@@ -88,9 +88,14 @@ android {
     }
 
     // Lint findings should not fail a build; they are reported, not enforced.
+    // The text report is what CI publishes, since it is the only static check
+    // available without a device — NewApi in particular matters here, because
+    // minSdk is 24 while the MediaStore publish path uses Q+ APIs.
     lint {
         abortOnError = false
         checkReleaseBuilds = false
+        warningsAsErrors = false
+        textReport = true
     }
 
     testOptions {

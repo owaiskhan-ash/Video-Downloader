@@ -75,6 +75,16 @@ jobs:
           echo "gradle exit: $status"
           exit "$status"
 
+      - name: Run Android Lint (reported, never blocking)
+        run: |
+          # Exit status is deliberately swallowed: a lint crash must not be able
+          # to block a release. The findings are published instead, into the
+          # release notes and, on failure, into the ci-logs branch.
+          set +e
+          gradle --no-daemon :app:lintDebug 2>&1 | tee lint-console.log
+          echo "lint exit: ${PIPESTATUS[0]} (non-blocking)"
+          exit 0
+
       - name: Collect and rename the APKs
         id: artefacts
         run: |
@@ -191,6 +201,26 @@ jobs:
             echo 'interpreter, `libffmpeg.so` and `libffprobe.so` do the muxing and'
             echo 'post-processing, and `libaria2c.so` is the optional external downloader.'
             echo
+            echo "### Lint"
+            echo
+            echo '```'
+            LINT=app/build/reports/lint-results-debug.txt
+            if [ -f "$LINT" ]; then
+              echo "errors:   $(grep -c ': Error:' "$LINT" 2>/dev/null || echo 0)"
+              echo "warnings: $(grep -c ': Warning:' "$LINT" 2>/dev/null || echo 0)"
+              echo
+              echo "-- error-severity findings --"
+              grep ': Error:' "$LINT" | head -40 || echo "(none)"
+              echo
+              echo "-- NewApi / minSdk findings of any severity --"
+              grep -E '\[(NewApi|InlinedApi|UnusedResources|MissingPermission)\]' "$LINT" | head -25 || echo "(none)"
+              echo
+              tail -3 "$LINT"
+            else
+              echo "(no lint report produced)"
+            fi
+            echo '```'
+            echo
             echo "### Unit tests"
             echo
             echo '```'
@@ -237,6 +267,9 @@ jobs:
               echo "-- $f --"
               grep -oE '(testcase name="[^"]*"|<failure[^>]*message="[^"]{0,400})' "$f" | head -40
             done
+            echo
+            echo "== lint =="
+            tail -n 120 app/build/reports/lint-results-debug.txt 2>/dev/null || echo "(no lint report)"
             echo
             echo "== build outputs =="
             find app/build/outputs -type f 2>/dev/null | head -40 || echo "(none)"
