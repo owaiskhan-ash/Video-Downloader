@@ -295,7 +295,40 @@ jobs:
           FFMPEG_BUNDLED: ${{ env.FFMPEG_BUNDLED }}
         run: |
           python3 - > apk-report.txt 2>&1 <<'PY'
-          import hashlib, os, zipfile
+          import hashlib, os, tarfile, zipfile
+
+
+          def read_members(path):
+              """(kind, names) for a zip or tar[.gz/.xz] archive."""
+              with open(path, 'rb') as fh:
+                  magic = fh.read(8)
+              try:
+                  return 'zip', zipfile.ZipFile(path).namelist()
+              except zipfile.BadZipFile:
+                  pass
+              try:
+                  with tarfile.open(path) as tf:
+                      return 'tar', tf.getnames()
+              except (tarfile.TarError, EOFError, OSError):
+                  pass
+              return f'unknown magic={magic[:6]!r}', []
+
+
+          def report_blob(z, entry, label, keys, tmp, list_all=40):
+              blob = z.read(entry)
+              open(tmp, 'wb').write(blob)
+              kind, names = read_members(tmp)
+              pyc = sum(1 for n in names if n.endswith('.pyc'))
+              print(f'== {entry} ({label}) ==')
+              print(f'   {len(blob)} bytes, archive={kind}, {len(names)} members, {pyc} .pyc')
+              for key in keys:
+                  hits = [n for n in names if key in n]
+                  print(f'   {key:16} -> {len(hits):6d}', hits[:3])
+              print(f'   first {min(list_all, len(names))} members:')
+              for n in names[:list_all]:
+                  print('     ', n)
+
+
           apk = os.environ.get('APK') or ''
           print('APK:', apk, '| exists:', os.path.exists(apk))
           print('FFMPEG_BUNDLED:', os.environ.get('FFMPEG_BUNDLED'))
@@ -304,77 +337,43 @@ jobs:
           for root, _dirs, files in os.walk('android/assets/ffmpeg'):
               for f in files:
                   p = os.path.join(root, f)
-                  print('   ', p, os.path.getsize(p), 'bytes'); found = True
+                  print('   ', p, os.path.getsize(p), 'bytes')
+                  found = True
           if not found:
               print('    (none)')
           if not os.path.exists(apk):
               raise SystemExit('no APK to inspect')
           size = os.path.getsize(apk)
-          print(f'== APK ==\nsize: {size} bytes ({size/1048576:.1f} MiB)')
+          print('== APK ==')
+          print(f'size: {size} bytes ({size / 1048576:.1f} MiB)')
           with open(apk, 'rb') as fh:
               print('sha256:', hashlib.sha256(fh.read()).hexdigest())
           z = zipfile.ZipFile(apk)
           names = z.namelist()
           print('zip entries:', len(names))
-          for pat in ['AndroidManifest.xml', 'classes', 'lib/', 'assets/']:
-              hits = [n for n in names if pat in n]
-              print(f'-- outer entries matching {pat!r}: {len(hits)}')
-              for h in hits[:40]:
-                  print(f'     {h}  ({z.getinfo(h).file_size} bytes)')
-          # p4a packs the Python runtime + our app sources into assets/private.*,
-          # which is an archive - .tar on this p4a version, .mp3 (a zip) on
-          # others. v0.1.15 shipped private.tar, so a zip-only check reported
-          # "no assets/private.mp3" and left the app's contents unverified.
-          blob_name = next((n for n in names
-                            if n.startswith('assets/private.')), None)
-          if not blob_name:
-              print('== no assets/private.* in the APK ==')
-          else:
-              blob = z.read(blob_name)
-              local = '/tmp/private.bin'
-              open(local, 'wb').write(blob)
-              print(f'== {blob_name}: {len(blob)} bytes ==')
-              members = []
-              try:
-                  members = zipfile.ZipFile(local).namelist()
-              except zipfile.BadZipFile:
-                  try:
-                      import tarfile
-                      with tarfile.open(local) as tf:
-                          members = tf.getnames()
-                  except tarfile.TarError as exc:
-                      print('   could not read as zip or tar:', exc)
-              print(f'   {len(members)} members')
-              for key in ['main.py', 'devserver.py', 'engine/', 'dist/',
-                          'yt_dlp', 'index.html']:
-                  hits = [n for n in members if key in n]
-                  print(f'   {key:14} -> {len(hits):5d}', hits[:4])
+          for n in names:
+              print(f'   {n}  ({z.getinfo(n).file_size} bytes)')
 
-          # yt_dlp is NOT in private.tar - p4a packs the Python stdlib and
-          # site-packages into lib/<abi>/libpybundle.so, which is a zip renamed
-          # to .so so the APK does not compress it twice. Open it to prove the
-          # one dependency the whole app exists for actually shipped.
+          # Where the app actually lives. p4a splits it two ways and the container format
+          # varies by version: assets/private.* holds the app sources and assets (.tar
+          # here, .mp3/zip on other versions), and lib/<abi>/libpybundle.so holds the
+          # stdlib plus site-packages - which is NOT a zip on this p4a, which is why a
+          # zip-only probe reported "not a zip archive" and left yt-dlp unverified.
+          # Read both as zip-or-tar so that question gets a real answer.
+          priv = next((n for n in names if n.startswith('assets/private.')), None)
+          if priv:
+              report_blob(z, priv, 'app sources + assets',
+                          ['main.pyc', 'devserver', 'engine/', 'dist/', 'yt_dlp'],
+                          '/tmp/private.bin')
+          else:
+              print('== no assets/private.* ==')
           for abi in ['arm64-v8a', 'armeabi-v7a']:
               lib = f'lib/{abi}/libpybundle.so'
-              try:
-                  blob = z.read(lib)
-              except KeyError:
-                  print(f'== no {lib} ==')
-                  continue
-              open('/tmp/bundle.bin', 'wb').write(blob)
-              print(f'== {lib}: {len(blob)} bytes ==')
-              try:
-                  bn = zipfile.ZipFile('/tmp/bundle.bin').namelist()
-              except zipfile.BadZipFile:
-                  print('   not a zip archive')
+              if lib in names:
+                  report_blob(z, lib, 'python stdlib + site-packages',
+                              ['yt_dlp', 'engine/', 'ssl', 'sqlite3', 'json'],
+                              '/tmp/bundle.bin', list_all=25)
                   break
-              print(f'   {len(bn)} members, '
-                    f'{sum(1 for n in bn if n.endswith(".pyc"))} .pyc')
-              for key in ['yt_dlp', 'engine/', 'devserver', 'main.pyc',
-                          'json/', 'ssl', 'sqlite3']:
-                  hits = [n for n in bn if key in n]
-                  print(f'   {key:14} -> {len(hits):5d}', hits[:3])
-              break
           PY
           # Append INSIDE apk-report.txt: this file is what gets pushed to
           # ci-logs, so anything only echoed to the console is unreadable.
