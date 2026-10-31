@@ -1,0 +1,322 @@
+# CI report — run 41176735183 / v0.4.1 / job success
+
+== lint ==
+errors:   0
+warnings: 103
+
+-- every error-severity finding --
+
+-- correctness categories, any severity --
+
+-- issue ids by frequency --
+     51 [GradleDependency]
+     36 [UnusedResources]
+      5 [IconLauncherShape]
+      3 [ObsoleteLintCustomCheck]
+      3 [AndroidGradlePluginVersion]
+      1 [UnusedAttribute]
+      1 [SdCardPath]
+      1 [PluralsCandidate]
+      1 [OldTargetApi]
+
+-- report tail --
+   The unique silhouette implies that your launcher icon should not be a
+   filled square.
+
+0 errors, 103 warnings
+
+== unit test results ==
+-- app/build/test-results/testDebugUnitTest/TEST-com.teal.downloader.data.model.ProgressParserTest.xml --
+testsuite name="com.teal.downloader.data.model.ProgressParserTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-10-31T06:29:46" hostname="runnervmnwato" time="0.038"
+testcase name="fragment progress without a total has no percentage"
+testcase name="fragment progress guards against a zero total"
+testcase name="returns null for lines without a speed"
+testcase name="recognises the ffmpeg post-processing stages"
+testcase name="parses speed with kilobytes"
+testcase name="fragment progress converts to a percentage"
+testcase name="parses speed with binary units"
+testcase name="effective percent prefers bytes then fragments"
+testcase name="parses total size"
+-- app/build/test-results/testDebugUnitTest/TEST-com.teal.downloader.util.TextUtilTest.xml --
+testsuite name="com.teal.downloader.util.TextUtilTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-31T06:29:47" hostname="runnervmnwato" time="0.014"
+testcase name="formats byte sizes"
+testcase name="formats quality, showing fps only when it is unusual"
+testcase name="formats duration with and without hours"
+testcase name="formats speed as a size per second"
+testcase name="formats eta"
+-- app/build/test-results/testDebugUnitTest/TEST-com.teal.downloader.downloader.ErrorClassifyTest.xml --
+testsuite name="com.teal.downloader.downloader.ErrorClassifyTest" tests="17" skipped="0" failures="0" errors="0" timestamp="2026-10-31T06:29:47" hostname="runnervmnwato" time="0.033"
+testcase name="an unavailable format is distinguished from a network failure"
+testcase name="a private video that mentions signing in is still reported as private"
+testcase name="unrecognised text falls back to its first line"
+testcase name="the youtube bot wall is treated as a stale engine, not an account problem"
+testcase name="the last error line wins over earlier noise"
+testcase name="stderr with no error line still yields its last line"
+testcase name="a non-zero exit is translated the same way as a thrown error"
+testcase name="age restriction is reported distinctly"
+testcase name="network failures name the url they could not reach"
+testcase name="an extraction failure is treated as a stale engine"
+testcase name="members-only content is not mistaken for a stale engine"
+testcase name="no video formats is read as a quality problem"
+testcase name="blank text still produces a message"
+testcase name="a genuine sign-in requirement offers cookies but no automatic retry"
+testcase name="unsupported urls are named as such"
+testcase name="empty stderr falls back to a generic message"
+testcase name="nsig extraction failure is treated as a stale engine"
+-- app/build/test-results/testDebugUnitTest/TEST-com.teal.downloader.downloader.CommandBuilderTest.xml --
+testsuite name="com.teal.downloader.downloader.CommandBuilderTest" tests="27" skipped="0" failures="0" errors="0" timestamp="2026-10-31T06:29:46" hostname="runnervmnwato" time="0.098"
+testcase name="url is never part of the argument list"
+testcase name="network options appear only when set"
+testcase name="restrict filenames is opt-in"
+testcase name="height cap uses the optional operator so it can fall back"
+testcase name="audio only with best format does not ask for a conversion"
+testcase name="tokenizer honours double quotes so values with spaces survive"
+testcase name="aria2c is only used when enabled, with matching connection counts"
+testcase name="compatibility mode prefers avc1 and mp4a and merges to mp4"
+testcase name="explicit format id wins over the preference selector"
+testcase name="custom output template is passed through"
+testcase name="post-processing flags follow their settings"
+testcase name="zero retries and single fragment omit their options"
+testcase name="tokenizer treats blanks as nothing"
+testcase name="info args dump json and can flatten playlists"
+testcase name="format selector has no duplicate fallbacks when uncapped"
+testcase name="output path and template always come first"
+testcase name="tokenizer keeps empty quoted strings"
+testcase name="no-playlist by default, playlist-items overrides it"
+testcase name="aria2c connections are clamped into the supported range"
+testcase name="best quality mode does not force mp4"
+testcase name="no height cap means no height filter at all"
+testcase name="separate video and audio ids are joined for merging"
+testcase name="progress parsing is always enabled"
+testcase name="retries and fragment settings are emitted as strings"
+testcase name="custom arguments are appended last and can override earlier options"
+testcase name="sub-langs is emitted once even when writing and embedding"
+testcase name="audio only extracts and converts to the chosen format"
+
+== build outputs ==
+app/build/outputs/sdk-dependencies/release/sdkDependencies.txt
+app/build/outputs/logs/manifest-merger-debug-report.txt
+app/build/outputs/logs/manifest-merger-release-report.txt
+app/build/outputs/apk/release/baselineProfiles/1/app-x86_64-release.dm
+app/build/outputs/apk/release/baselineProfiles/1/app-arm64-v8a-release.dm
+app/build/outputs/apk/release/baselineProfiles/1/app-armeabi-v7a-release.dm
+app/build/outputs/apk/release/baselineProfiles/0/app-x86_64-release.dm
+app/build/outputs/apk/release/baselineProfiles/0/app-arm64-v8a-release.dm
+app/build/outputs/apk/release/baselineProfiles/0/app-armeabi-v7a-release.dm
+app/build/outputs/apk/release/app-x86_64-release.apk
+app/build/outputs/apk/release/app-arm64-v8a-release.apk
+app/build/outputs/apk/release/app-armeabi-v7a-release.apk
+app/build/outputs/apk/release/output-metadata.json
+
+== artefact collection ==
++ RAW_REF=v0.4.1
+++ printf %s v0.4.1
+++ tr / -
++ TAG=v0.4.1
++ echo 'ref=v0.4.1 -> tag=v0.4.1'
+ref=v0.4.1 -> tag=v0.4.1
++ mkdir -p release
++ echo '== APKs Gradle produced =='
+== APKs Gradle produced ==
++ find app/build/outputs -name '*.apk' -printf '%p  %s bytes\n'
+app/build/outputs/apk/release/app-x86_64-release.apk  54533278 bytes
+app/build/outputs/apk/release/app-arm64-v8a-release.apk  52397569 bytes
+app/build/outputs/apk/release/app-armeabi-v7a-release.apk  49990195 bytes
++ count=0
++ for apk in app/build/outputs/apk/release/*.apk
++ '[' -e app/build/outputs/apk/release/app-arm64-v8a-release.apk ']'
+++ basename app/build/outputs/apk/release/app-arm64-v8a-release.apk .apk
++ base=app-arm64-v8a-release
+++ printf %s app-arm64-v8a-release
+++ grep -oE 'arm64-v8a|armeabi-v7a|x86_64|x86'
+++ head -1
++ abi=arm64-v8a
++ abi=arm64-v8a
++ out=release/teal-v0.4.1-arm64-v8a.apk
++ cp app/build/outputs/apk/release/app-arm64-v8a-release.apk release/teal-v0.4.1-arm64-v8a.apk
++ count=1
+++ stat -c%s release/teal-v0.4.1-arm64-v8a.apk
++ echo 'collected release/teal-v0.4.1-arm64-v8a.apk (52397569 bytes)'
+collected release/teal-v0.4.1-arm64-v8a.apk (52397569 bytes)
++ for apk in app/build/outputs/apk/release/*.apk
++ '[' -e app/build/outputs/apk/release/app-armeabi-v7a-release.apk ']'
+++ basename app/build/outputs/apk/release/app-armeabi-v7a-release.apk .apk
++ base=app-armeabi-v7a-release
+++ printf %s app-armeabi-v7a-release
+++ grep -oE 'arm64-v8a|armeabi-v7a|x86_64|x86'
+++ head -1
++ abi=armeabi-v7a
++ abi=armeabi-v7a
++ out=release/teal-v0.4.1-armeabi-v7a.apk
++ cp app/build/outputs/apk/release/app-armeabi-v7a-release.apk release/teal-v0.4.1-armeabi-v7a.apk
++ count=2
+++ stat -c%s release/teal-v0.4.1-armeabi-v7a.apk
++ echo 'collected release/teal-v0.4.1-armeabi-v7a.apk (49990195 bytes)'
+collected release/teal-v0.4.1-armeabi-v7a.apk (49990195 bytes)
++ for apk in app/build/outputs/apk/release/*.apk
++ '[' -e app/build/outputs/apk/release/app-x86_64-release.apk ']'
+++ basename app/build/outputs/apk/release/app-x86_64-release.apk .apk
++ base=app-x86_64-release
+++ printf %s app-x86_64-release
+++ grep -oE 'arm64-v8a|armeabi-v7a|x86_64|x86'
+++ head -1
++ abi=x86_64
++ abi=x86_64
++ out=release/teal-v0.4.1-x86_64.apk
++ cp app/build/outputs/apk/release/app-x86_64-release.apk release/teal-v0.4.1-x86_64.apk
++ count=3
+++ stat -c%s release/teal-v0.4.1-x86_64.apk
++ echo 'collected release/teal-v0.4.1-x86_64.apk (54533278 bytes)'
+collected release/teal-v0.4.1-x86_64.apk (54533278 bytes)
++ echo 'apk count: 3'
+apk count: 3
++ '[' 3 -eq 0 ']'
++ ls -la release/
+total 153256
+drwxr-xr-x  2 runner runner     4096 Oct 31 06:30 .
+drwxr-xr-x 12 runner runner     4096 Oct 31 06:30 ..
+-rw-r--r--  1 runner runner 52397569 Oct 31 06:30 teal-v0.4.1-arm64-v8a.apk
+-rw-r--r--  1 runner runner 49990195 Oct 31 06:30 teal-v0.4.1-armeabi-v7a.apk
+-rw-r--r--  1 runner runner 54533278 Oct 31 06:30 teal-v0.4.1-x86_64.apk
++ sha256sum release/teal-v0.4.1-arm64-v8a.apk release/teal-v0.4.1-armeabi-v7a.apk release/teal-v0.4.1-x86_64.apk
++ tee release/SHA256SUMS.txt
+69e9a0b4864186d02c74a37660b13bc7b4c2d946f62c6ffdce7f3dd3ceab901e  release/teal-v0.4.1-arm64-v8a.apk
+351daece51b5b8ebdc8fde6dc46678dbc3f3395e482fc9423b037c0f2e586b46  release/teal-v0.4.1-armeabi-v7a.apk
+9f45ac1f2a26f92779c64f24c4b48b1f6eff1001ad23a84d286fc6f1b722391d  release/teal-v0.4.1-x86_64.apk
+
+== compiler errors ==
+
+== compiler warnings (sample) ==
+w: file:///home/runner/work/Video-Downloader/Video-Downloader/app/src/main/java/com/teal/downloader/ui/screen/HistoryScreen.kt:171:40 'val Icons.Rounded.OpenInNew: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.OpenInNew.
+w: file:///home/runner/work/Video-Downloader/Video-Downloader/app/src/main/java/com/teal/downloader/ui/screen/QueueScreen.kt:207:44 'val Icons.Rounded.OpenInNew: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.OpenInNew.
+w: file:///home/runner/work/Video-Downloader/Video-Downloader/app/src/main/java/com/teal/downloader/ui/screen/HistoryScreen.kt:171:40 'val Icons.Rounded.OpenInNew: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.OpenInNew.
+w: file:///home/runner/work/Video-Downloader/Video-Downloader/app/src/main/java/com/teal/downloader/ui/screen/QueueScreen.kt:207:44 'val Icons.Rounded.OpenInNew: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.OpenInNew.
+
+== failure summary ==
+
+== gradle console (tail 250) ==
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.9/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+> Configure project :app
+WARNING: The option setting 'android.defaults.buildfeatures.buildconfig=true' is deprecated.
+The current default is 'false'.
+It will be removed in version 9.0 of the Android Gradle plugin.
+To keep using this feature, add the following to your module-level build.gradle files:
+    android.buildFeatures.buildConfig = true
+or from Android Studio, click: `Refactor` > `Migrate BuildConfig to Gradle Build Files`.
+
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugBuildConfig
+> Task :app:generateDebugResValues FROM-CACHE
+> Task :app:checkDebugAarMetadata
+> Task :app:mapDebugSourceSetPaths
+> Task :app:generateDebugResources FROM-CACHE
+> Task :app:mergeDebugResources FROM-CACHE
+> Task :app:packageDebugResources FROM-CACHE
+> Task :app:parseDebugLocalResources FROM-CACHE
+> Task :app:createDebugCompatibleScreenManifests
+> Task :app:extractDeepLinksDebug FROM-CACHE
+
+> Task :app:processDebugMainManifest
+/home/runner/work/Video-Downloader/Video-Downloader/app/src/main/AndroidManifest.xml:25:9-41 Warning:
+	android:extractNativeLibs should not be specified in this source AndroidManifest.xml file. See https://d.android.com/guide/topics/manifest/application-element#extractNativeLibs for more information.
+The AGP Upgrade Assistant can remove the attribute from the AndroidManifest.xml file and update the build file accordingly. See https://d.android.com/studio/build/agp-upgrade-assistant for more information.
+
+> Task :app:processDebugManifest
+> Task :app:javaPreCompileDebug FROM-CACHE
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+> Task :app:javaPreCompileDebugUnitTest FROM-CACHE
+> Task :app:preReleaseBuild UP-TO-DATE
+> Task :app:mergeReleaseJniLibFolders
+> Task :app:processDebugManifestForPackage
+> Task :app:mergeReleaseNativeLibs
+> Task :app:buildKotlinToolingMetadata
+> Task :app:generateReleaseBuildConfig
+> Task :app:checkReleaseAarMetadata
+> Task :app:generateReleaseResValues FROM-CACHE
+> Task :app:checkReleaseDuplicateClasses
+> Task :app:mapReleaseSourceSetPaths
+> Task :app:generateReleaseResources FROM-CACHE
+> Task :app:mergeReleaseResources FROM-CACHE
+
+> Task :app:stripReleaseDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libaria2c.so, libaria2c.zip.so, libdatastore_shared_counter.so, libffmpeg.so, libffmpeg.zip.so, libffprobe.so, libpython.so, libpython.zip.so.
+
+> Task :app:packageReleaseResources FROM-CACHE
+> Task :app:extractReleaseNativeSymbolTables FROM-CACHE
+> Task :app:mergeReleaseNativeDebugMetadata NO-SOURCE
+> Task :app:parseReleaseLocalResources FROM-CACHE
+> Task :app:createReleaseCompatibleScreenManifests
+> Task :app:extractDeepLinksRelease FROM-CACHE
+
+> Task :app:processReleaseMainManifest
+/home/runner/work/Video-Downloader/Video-Downloader/app/src/main/AndroidManifest.xml:25:9-41 Warning:
+	android:extractNativeLibs should not be specified in this source AndroidManifest.xml file. See https://d.android.com/guide/topics/manifest/application-element#extractNativeLibs for more information.
+The AGP Upgrade Assistant can remove the attribute from the AndroidManifest.xml file and update the build file accordingly. See https://d.android.com/studio/build/agp-upgrade-assistant for more information.
+
+> Task :app:processReleaseManifest
+> Task :app:javaPreCompileRelease FROM-CACHE
+> Task :app:desugarReleaseFileDependencies FROM-CACHE
+> Task :app:processReleaseManifestForPackage
+> Task :app:mergeReleaseStartupProfile
+> Task :app:mergeExtDexRelease FROM-CACHE
+> Task :app:mergeReleaseArtProfile
+> Task :app:mergeReleaseShaders
+> Task :app:compileReleaseShaders NO-SOURCE
+> Task :app:generateReleaseAssets UP-TO-DATE
+> Task :app:mergeReleaseAssets
+> Task :app:compressReleaseAssets FROM-CACHE
+> Task :app:extractReleaseVersionControlInfo
+> Task :app:collectReleaseDependencies
+> Task :app:sdkReleaseDependencyData
+> Task :app:validateSigningRelease
+> Task :app:writeReleaseAppMetadata
+> Task :app:writeReleaseSigningConfigVersions
+> Task :app:processDebugResources
+> Task :app:processReleaseResources
+> Task :app:optimizeReleaseResources
+> Task :app:kspDebugKotlin
+> Task :app:kspReleaseKotlin
+
+> Task :app:compileDebugKotlin
+w: file:///home/runner/work/Video-Downloader/Video-Downloader/app/src/main/java/com/teal/downloader/ui/screen/HistoryScreen.kt:171:40 'val Icons.Rounded.OpenInNew: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.OpenInNew.
+w: file:///home/runner/work/Video-Downloader/Video-Downloader/app/src/main/java/com/teal/downloader/ui/screen/QueueScreen.kt:207:44 'val Icons.Rounded.OpenInNew: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.OpenInNew.
+
+> Task :app:compileReleaseKotlin
+w: file:///home/runner/work/Video-Downloader/Video-Downloader/app/src/main/java/com/teal/downloader/ui/screen/HistoryScreen.kt:171:40 'val Icons.Rounded.OpenInNew: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.OpenInNew.
+w: file:///home/runner/work/Video-Downloader/Video-Downloader/app/src/main/java/com/teal/downloader/ui/screen/QueueScreen.kt:207:44 'val Icons.Rounded.OpenInNew: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.OpenInNew.
+
+> Task :app:compileReleaseJavaWithJavac
+> Task :app:compileDebugJavaWithJavac
+> Task :app:bundleDebugClassesToRuntimeJar
+> Task :app:bundleDebugClassesToCompileJar
+> Task :app:processDebugJavaRes
+> Task :app:kspDebugUnitTestKotlin
+> Task :app:dexBuilderRelease
+> Task :app:mergeReleaseGlobalSynthetics FROM-CACHE
+> Task :app:processReleaseJavaRes
+> Task :app:compileDebugUnitTestKotlin
+> Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:processDebugUnitTestJavaRes
+> Task :app:mergeReleaseJavaResource
+> Task :app:testDebugUnitTest
+> Task :app:mergeDexRelease
+> Task :app:compileReleaseArtProfile
+> Task :app:packageRelease
+> Task :app:createReleaseApkListingFileRedirect
+> Task :app:assembleRelease
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1793428134069.json
+
+BUILD SUCCESSFUL in 1m 8s
+72 actionable tasks: 52 executed, 20 from cache
+
+== environment ==
+/dev/root       145G   60G   85G  42% /
+openjdk version "17.0.21" 2026-10-20
+OpenJDK Runtime Environment Temurin-17.0.21+9 (build 17.0.21+9)
+Gradle 8.9
+Launcher JVM:  17.0.21 (Eclipse Adoptium 17.0.21+9)
+Daemon JVM:    /usr/lib/jvm/temurin-17-jdk-amd64 (no JDK specified, using current Java home)
