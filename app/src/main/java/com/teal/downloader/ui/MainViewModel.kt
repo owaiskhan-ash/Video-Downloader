@@ -106,7 +106,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _home.update { it.copy(isFetching = true, error = null) }
         viewModelScope.launch {
             val result = runCatching {
-                DownloadManager.fetchInfo(url, flatPlaylist = false)
+                // Flat: for a playlist URL this returns the entry list without
+                // resolving every video first, which on a long playlist is the
+                // difference between a card appearing and a minute of spinner.
+                // The entry list is all this screen renders, and each entry is
+                // resolved individually when it is downloaded. For a single
+                // video URL the flag is a no-op, so formats still come back.
+                DownloadManager.fetchInfo(url, flatPlaylist = true)
             }
             _home.update { state ->
                 result.fold(

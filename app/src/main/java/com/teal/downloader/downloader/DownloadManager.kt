@@ -87,6 +87,26 @@ object DownloadManager {
     }
 
     /**
+     * Unpacks the engine and refreshes yt-dlp in the background, ahead of need.
+     *
+     * Deferring this to first use put the entire cost — unzipping the Python
+     * runtime, initialising ffmpeg and aria2c, and a GitHub download whenever a
+     * refresh is due — behind the spinner on the user's first paste. Starting it
+     * at launch overlaps that work with the time spent finding and copying a
+     * link, which is usually enough to hide it completely.
+     *
+     * Fire and forget: [YtdlpManager.prepare] swallows its own failures, because
+     * a warm-up that does not complete is not an error worth showing. The first
+     * real fetch or download initialises again and reports properly if the engine
+     * is genuinely broken. Concurrent calls are already serialised by the
+     * manager's init mutex, so a paste during warm-up waits rather than
+     * duplicating the work.
+     */
+    fun prepareEngine() {
+        scope.launch { ytdlp?.prepare() }
+    }
+
+    /**
      * Reads metadata for a URL. Routed through the manager so the app keeps a
      * single YtdlpManager (and therefore a single yt-dlp initialisation) rather
      * than one per ViewModel.
