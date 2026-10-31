@@ -9,8 +9,12 @@ class TealApp : Application() {
     override fun onCreate() {
         super.onCreate()
         NotificationUtil.createChannels(this)
-        // Starts the queue and its settings collectors. yt-dlp itself is not
-        // unpacked here: that takes seconds, so it is deferred to first use.
+        // Starts the queue and its settings collectors.
         DownloadManager.init(this)
+        // Then unpacks yt-dlp in the background. This used to be deferred to
+        // first use, which meant the first paste paid for it: seconds of
+        // unzipping the Python runtime, plus a GitHub download whenever an
+        // engine refresh was due. Both now overlap with the user finding a link.
+        DownloadManager.prepareEngine()
     }
 }

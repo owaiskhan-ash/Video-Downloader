@@ -14,6 +14,8 @@ import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLException
 import com.yausername.youtubedl_android.YoutubeDLRequest
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -51,6 +53,13 @@ class YtdlpManager(private val context: Context) {
     @Volatile
     private var initialised = false
 
+    /** Recently fetched metadata; see [fetchInfo]. */
+    private val infoCache = ConcurrentHashMap<InfoKey, CachedInfo>()
+
+    private data class InfoKey(val url: String, val flatPlaylist: Boolean, val network: String)
+
+    private data class CachedInfo(val at: Long, val info: YtdlInfo)
+
     /**
      * Deliberately SharedPreferences rather than the DataStore the settings use:
      * this is engine bookkeeping that no screen binds to, and reading it must
@@ -84,7 +93,33 @@ class YtdlpManager(private val context: Context) {
                 }
             }
             initialised = true
+        }
+    }
+
+    /**
+     * Initialises the engine and refreshes yt-dlp if one is due.
+     *
+     * This is the slow part, and it is deliberately *not* part of
+     * [ensureInitialised]: unzipping the Python runtime takes seconds and a due
+     * refresh is a download from GitHub bounded at 45s. Both used to run on the
+     * first paste, behind a spinner the user was watching. They now run at app
+     * start, overlapping with the time spent finding and copying a link.
+     *
+     * A refresh is still performed on demand by [withEngineRetry], where a
+     * download has already failed and the wait is buying something.
+     */
+    suspend fun prepare() {
+        try {
+            ensureInitialised()
             refreshEngineIfDue()
+        } catch (canceled: CancellationException) {
+            // Not ours to swallow: this can be a 45s network call, and eating a
+            // cancellation would leave the caller thinking it had finished.
+            throw canceled
+        } catch (e: Exception) {
+            // Anything else is a warm-up that simply did not complete. The next
+            // real fetch initialises again and reports properly if the engine is
+            // genuinely broken, so there is nothing worth surfacing here.
         }
     }
 
@@ -191,14 +226,51 @@ class YtdlpManager(private val context: Context) {
         }
     }
 
-    /** Reads metadata for [url] without downloading anything. */
+    /**
+     * Reads metadata for [url] without downloading anything.
+     *
+     * Results are cached briefly and keyed on everything that could change the
+     * answer, so re-pasting a link — or fetching again after a failure — costs
+     * no second round trip to the site. A cache hit does not even touch the
+     * engine.
+     */
     suspend fun fetchInfo(
         url: String,
         settings: DownloadSettings = DownloadSettings(),
         flatPlaylist: Boolean = false,
-    ): YtdlInfo = withContext(Dispatchers.IO) {
-        ensureInitialised()
-        withEngineRetry { runFetchInfo(url, settings, flatPlaylist) }
+    ): YtdlInfo {
+        val key = InfoKey(
+            url = url,
+            flatPlaylist = flatPlaylist,
+            // The three settings that change what the site returns.
+            network = "${settings.proxy}|${settings.cookiesFile}|${settings.userAgent}",
+        )
+        cachedInfo(key)?.let { return it }
+
+        val info = withContext(Dispatchers.IO) {
+            ensureInitialised()
+            withEngineRetry { runFetchInfo(url, settings, flatPlaylist) }
+        }
+        rememberInfo(key, info)
+        return info
+    }
+
+    private fun cachedInfo(key: InfoKey): YtdlInfo? {
+        val entry = infoCache[key] ?: return null
+        if (System.currentTimeMillis() - entry.at > INFO_CACHE_TTL_MS) {
+            infoCache.remove(key)
+            return null
+        }
+        return entry.info
+    }
+
+    private fun rememberInfo(key: InfoKey, info: YtdlInfo) {
+        // Bounded, because this lives as long as the process. Evicting the
+        // oldest is enough: a handful of entries covers a normal session.
+        if (infoCache.size >= INFO_CACHE_MAX) {
+            infoCache.keys.minByOrNull { infoCache[it]?.at ?: 0L }?.let { infoCache.remove(it) }
+        }
+        infoCache[key] = CachedInfo(System.currentTimeMillis(), info)
     }
 
     private suspend fun runFetchInfo(
@@ -283,6 +355,8 @@ class YtdlpManager(private val context: Context) {
         const val REFRESH_INTERVAL_MS = 7L * 24 * 60 * 60 * 1000
         const val RETRY_AFTER_FAILURE_MS = 60L * 60 * 1000
         const val REFRESH_TIMEOUT_MS = 45_000L
+        const val INFO_CACHE_TTL_MS = 5L * 60 * 1000
+        const val INFO_CACHE_MAX = 16
     }
 }
 
